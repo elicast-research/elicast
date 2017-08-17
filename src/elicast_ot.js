@@ -12,8 +12,9 @@
  *
  */
 
+export default function ElicastOT() {
 
-ElicastOT = {};
+}
 
 
 /*  This function validate Elicast OT
@@ -25,7 +26,6 @@ ElicastOT = {};
  *
  */
 function validateOt(ot) {
-
 }
 
 

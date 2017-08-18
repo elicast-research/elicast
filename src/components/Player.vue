@@ -15,7 +15,7 @@ export default {
 }
 </script>
 
-<style>
+<style lang="scss">
 #player {
   font-family: 'Avenir', Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;

@@ -1,29 +1,41 @@
 <template>
   <div id="editor">
-    <img src="../assets/logo.png">
-    {{ loaded }}
+    <!-- <img src="../assets/logo.png"> -->
+    <codemirror v-model="code" :options="editorOptions"></codemirror>
+    <Slider />
   </div>
 </template>
 
 <script>
 import ElicastOT from '@/elicast_ot'
+import { codemirror, CodeMirror } from 'vue-codemirror'
+import 'codemirror/addon/selection/mark-selection'
+import Slider from '@/components/slider'
+
 
 export default {
   data () {
     return {
-      loaded: ElicastOT
+      code: 'const a = 10',
+      editorOptions: {
+        // mode: 'python'
+        lineNumbers: true,
+        cursorBlinkRate: 0, // disable default blinker which is not working in no-focus state
+        autofocus: true
+      }
     }
+  },
+  components: {
+    codemirror,
+    Slider
   }
 }
 </script>
 
-<style>
-#app {
-  font-family: 'Avenir', Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
+<style lang="scss">
+
+#editor {
+
 }
+
 </style>

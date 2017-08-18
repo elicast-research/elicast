@@ -9,8 +9,8 @@ function resolve (dir) {
 
 module.exports = {
   entry: {
-    editor: './src/editor.js',
-    player: './src/player.js'
+    editor: './src/editor_main.js',
+    player: './src/player_main.js'
   },
   output: {
     path: config.build.assetsRoot,

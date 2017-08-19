@@ -1,7 +1,11 @@
 <template>
   <div id="editor">
     <!-- <img src="../assets/logo.png"> -->
-    <codemirror v-model="code" :options="editorOptions"></codemirror>
+    <codemirror v-model="code"
+                :options="editorOptions"
+                @beforeChange="onEditorBeforeChange"
+                @cursorActivity="onEditorCursorActivity">
+    </codemirror>
     <Slider />
   </div>
 </template>
@@ -23,6 +27,14 @@ export default {
         cursorBlinkRate: 0, // disable default blinker which is not working in no-focus state
         autofocus: true
       }
+    }
+  },
+  methods: {
+    onEditorBeforeChange(cm, changeObj) {
+      console.log('OT', ElicastOT.makeOTFromCMChange(cm, changeObj));
+    },
+    onEditorCursorActivity(cm) {
+      console.log('OT', ElicastOT.makeOTFromCMSelection(cm));
     }
   },
   components: {

@@ -19,8 +19,6 @@ export default {
 
 <style lang="scss">
 
-@import "~bootstrap/scss/bootstrap";
-
 h1 {
   margin-top: 1.5rem;
 }

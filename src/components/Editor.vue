@@ -1,12 +1,17 @@
 <template>
   <div id="editor">
-    <!-- <img src="../assets/logo.png"> -->
     <codemirror v-model="code"
                 :options="editorOptions"
                 @beforeChange="onEditorBeforeChange"
                 @cursorActivity="onEditorCursorActivity">
     </codemirror>
-    <Slider />
+    <div class="controls">
+      <a @click="isPlaying = !isPlaying">
+        <i v-show="!isPlaying" class="fa fa-play" aria-hidden="true"></i>
+        <i v-show="isPlaying" class="fa fa-pause" aria-hidden="true"></i>
+      </a>
+      <Slider ref="slider" class="slider" />
+    </div>
   </div>
 </template>
 
@@ -26,8 +31,12 @@ export default {
         lineNumbers: true,
         cursorBlinkRate: 0, // disable default blinker which is not working in no-focus state
         autofocus: true
-      }
+      },
+      isPlaying: false
     }
+  },
+  mounted() {
+    this.$refs.slider.max = 100
   },
   methods: {
     onEditorBeforeChange(cm, changeObj) {
@@ -45,9 +54,19 @@ export default {
 </script>
 
 <style lang="scss">
+.controls {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 0;
 
-#editor {
+  a {
+    width: 1.5rem;
+    text-align: center;
+    cursor: pointer;
+  }
 
+  .slider {
+    flex: auto;
+  }
 }
-
 </style>

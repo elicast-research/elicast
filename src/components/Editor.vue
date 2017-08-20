@@ -7,11 +7,13 @@
     </codemirror>
 
     <div class="controls">
-      <a @click="isPlaying = !isPlaying">
-        <i v-show="!isPlaying" class="fa fa-play" aria-hidden="true"></i>
-        <i v-show="isPlaying" class="fa fa-pause" aria-hidden="true"></i>
+      <a @click="togglePlayMode">
+        <i v-show="isPlayback" class="fa fa-play" aria-hidden="true"></i>
+        <i v-show="isPause" class="fa fa-pause" aria-hidden="true"></i>
+        <i v-show="isStandby" class="fa fa-video-camera" aria-hidden="true"></i>
+        <i v-show="isRecord" class="fa fa-video-camera text-danger" aria-hidden="true"></i>
       </a>
-      <Slider ref="slider" class="slider" />
+      <Slider ref="slider" class="slider" @change="handleSliderChange" :disabled="isRecord" />
     </div>
 
     <button class="btn btn-primary btn-sm"
@@ -29,6 +31,12 @@ import { codemirror, CodeMirror } from 'vue-codemirror'
 import 'codemirror/addon/selection/mark-selection'
 import Slider from '@/components/slider'
 
+const PlayMode = {
+  PLAYBACK: 'playback',
+  PAUSE: 'pause',
+  STANDBY: 'standby',
+  RECORD: 'record'
+}
 
 export default {
   data () {
@@ -40,13 +48,38 @@ export default {
         cursorBlinkRate: 0, // disable default blinker which is not working in no-focus state
         autofocus: true
       },
-      isPlaying: false,
       ots: [],
-      exerciseStartIndex: -1
+      exerciseStartIndex: -1,
+      ts: 0,
+      playMode: PlayMode.STANDBY
+    }
+  },
+  computed: {
+    isPause() {
+      return this.playMode === PlayMode.PLAYBACK
+    },
+    isPlayback() {
+      return this.playMode === PlayMode.PAUSE
+    },
+    isStandby() {
+      return this.playMode === PlayMode.STANDBY
+    },
+    isRecord() {
+      return this.playMode === PlayMode.RECORD
+    }
+  },
+  watch: {
+    ts(newTs) {
+      if (newTs === this.$refs.slider.max) {
+        this.playMode = PlayMode.STANDBY
+      } else {
+        this.playMode = PlayMode.PAUSE
+      }
     }
   },
   mounted() {
     this.$refs.slider.max = 100
+    this.$refs.slider.val = 100
   },
   methods: {
     onEditorBeforeChange(cm, changeObj) {
@@ -66,6 +99,19 @@ export default {
     },
     onExerciseStopClick(event) {
       this.exerciseStartIndex = -1;
+      console.log('OT', ElicastOT.makeOTFromCMSelection(cm));
+    },
+    handleSliderChange(val) {
+      this.ts = val
+    },
+    togglePlayMode() {
+      const toggleState = {
+        [PlayMode.PLAYBACK]: PlayMode.PAUSE,
+        [PlayMode.PAUSE]: PlayMode.PLAYBACK,
+        [PlayMode.STANDBY]: PlayMode.RECORD,
+        [PlayMode.RECORD]: PlayMode.STANDBY
+      }
+      this.playMode = toggleState[this.playMode]
     }
   },
   components: {
@@ -76,6 +122,10 @@ export default {
 </script>
 
 <style lang="scss">
+.CodeMirror {
+  border: 1px solid #eee;
+}
+
 .controls {
   display: flex;
   align-items: center;

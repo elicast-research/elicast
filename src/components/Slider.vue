@@ -1,5 +1,5 @@
 <template>
-  <div class="slider">
+  <div class="slider" :disabled="disabled">
     <canvas ref="canvas"
             :width="width"
             :height="height"
@@ -14,10 +14,18 @@ import _ from 'lodash'
 const WIDTH_PADDING = 20
 const SLIDE_HEIGHT = 4
 const THUMB_WIDTH = 4, THUMB_HEIGHT = 10
+const DISABLED_ALPHA = 0.25
 
 let isMouseDown = false
 
 export default {
+  props: {
+    disabled: {
+      type: Boolean,
+      default: false
+    }
+  },
+
   data() {
     return {
       width: 0, // resized
@@ -41,6 +49,12 @@ export default {
     }
   },
 
+  watch: {
+    width() { this.drawDebounce() },
+    height() { this.drawDebounce() },
+    disabled() { this.draw() }
+  },
+
   mounted() {
     window.addEventListener('resize', this.handleResize)
 
@@ -49,11 +63,6 @@ export default {
 
   beforeDestroy() {
     window.removeEventListener('resize', this.handleResize)
-  },
-
-  watch: {
-    width() { this.redrawDebounce() },
-    height() { this.redrawDebounce() }
   },
 
   methods: {
@@ -72,7 +81,7 @@ export default {
         document.addEventListener('mousemove', this.handleDocumentMousemove)
         document.addEventListener('mouseup', this.handleDocumentMouseup)
 
-        this.$refs.canvas.focus()
+        this.$el.focus()
       }
       return false
     },
@@ -81,7 +90,7 @@ export default {
       if (isMouseDown) {
         e.preventDefault()
 
-        let offsetX = e.pageX - this.$refs.canvas.offsetLeft
+        let offsetX = e.pageX - this.$el.offsetLeft
         this.slide(offsetX)
       }
 
@@ -94,18 +103,20 @@ export default {
       document.removeEventListener('mousemove', this.handleDocumentMousemove)
       document.removeEventListener('mouseup', this.handleDocumentMouseup)
 
-      this.$refs.canvas.focus()
+      this.$el.focus()
 
       return false
     },
 
     slide(offset) {
+      if (this.disabled) return false
+
       let val = this.offsetToVal(offset)
       if (this.val !== val) {
         this.$emit('change', val)
         this.val = val
 
-        this.redraw()
+        this.draw()
       }
     },
 
@@ -120,13 +131,13 @@ export default {
       return val * this.slideWidth + this.slideLeft
     },
 
-    redrawDebounce: _.debounce(function() { this.redraw() }, 100),
+    drawDebounce: _.debounce(function() { this.draw() }, 100),
 
-    redraw() {
-      console.log('redraw', this.width, this.height)
-
+    draw() {
       let canvas = this.$refs.canvas
       let ctx = canvas.getContext('2d')
+
+      ctx.globalAlpha = this.disabled ? DISABLED_ALPHA : 1
 
       ctx.clearRect(0, 0, canvas.width, canvas.height)
 
@@ -146,7 +157,13 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-canvas {
-  cursor: pointer;
+.slider[disabled] canvas {
+  cursor: default;
+}
+.slider {
+  canvas {
+    cursor: pointer;
+  }
+
 }
 </style>

@@ -5,8 +5,8 @@
  *  Four types of commands := "selection", "text", "exPlaceholder", "exShow"
  *   - "selection" : fromPos, toPos
  *   - "text" : fromPos, toPos, insertedText, removedText
- *   - "exPlaceholder" : exId, title, description, solutionOts
- *   - "exShow" : exId
+ *   - "exPlaceholder" : exId, solutionOts
+ *   - "exShow" : exId, description
  *
  *  When calculating "Pos", OT regards all line endings as "\n"
  *
@@ -40,9 +40,7 @@ function validateOt(ot) {
       ot.fromPos >= 0 && ot.fromPos <= ot.toPos);
 
   } else if (ot.command === "exPlaceholder") {
-    if (!(typeof ot.exId === "number" && typeof ot.title === "string" &&
-        typeof ot.description === "string" && typeof ot.solutionOts === "list" &&
-        ot.exId >= 0)) {
+    if (!(typeof ot.exId === "number" && ot.exId >= 0)) {
       return false;
     }
 
@@ -54,7 +52,8 @@ function validateOt(ot) {
     return true;
 
   } else if (ot.command === "exShow") {
-    return (typeof ot.exId === "number" && typeof ot.exId >= 0);
+    return (typeof ot.exId === "number" && typeof ot.description === "string" &&
+      typeof ot.exId >= 0);
 
   } else {
     return false;
@@ -105,6 +104,63 @@ function lineChToPos(content, lineCh) {
     lineSep.exec(content);
   }
   return lineSep.lastIndex + lineCh.ch;
+}
+
+
+function isAreaConflict(area, fromPos, toPos) {
+  return (fromPos <= area.fromPos && area.toPos <= toPos) || // case: [ fromPos { area } toPos ]
+    (fromPos <= area.fromPos && area.fromPos < toPos) || // case: [ fromPos { area toPos ] area }
+    (fromPos < area.toPos && area.toPos <= toPos) || // case: { area [ fromPos area } toPos ]
+    (area.fromPos <= fromPos && toPos <= area.toPos); // case: { area [ fromPos toPos ] area }
+}
+
+
+function getExerciseAreas(ots) {
+  // TODO: use binary search in areas for efficiency
+  const areas = [];
+  for (const ot of ots) {
+    if (ot.command === "text") {
+      const deltaPos = ot.insertedText.length - ot.removedText.length;
+
+      for (const area of areas) {
+        if (isAreaConflict(area, ot.fromPos, ot.toPos)) {
+          console.error("OT conflicts to exercise area");
+          return;
+        }
+
+        if (ot.toPos <= area.fromPos) {
+          area.fromPos += deltaPos;
+          area.toPos += deltaPos;
+        }
+      }
+    } else if (ot.command === "exPlaceholder") {
+      // areas.push({
+      //   type: "exercise",
+      //   fromPos: ot.fromPos,
+      //   toPos: ot.toPos
+      // });
+    }
+  }
+
+  areas.sort((areaA, areaB) => areaA.fromPos - areaB.fromPos);
+
+  return areas;
+}
+
+
+function getAreas(ots) {
+  let docLength = 0;
+  for (const ot of ots) {
+    if (ot.command === "text") {
+      docLength += ot.insertedText.length - ot.removedText.length;
+    } else if (ot.command === "exPlaceholder") {
+      for (const solutionOt of ot.solutionOts) {
+        if (solutionOt.command === "text") {
+          docLength += solutionOt.insertedText.length - solutionOt.removedText.length;
+        }
+      }
+    }
+  }
 }
 
 
@@ -190,7 +246,7 @@ ElicastOT.makeOTFromCMSelection = function(cm) {
  *
  *  Args
  *    - cm (CodeMirror) -- The CodeMirror instance
- *    - changeObj (object) --
+ *    - changeObj (object) -- The object passed from beforeChange event
  *
  *  Return := Elicast "text" OT
  *
@@ -216,33 +272,38 @@ ElicastOT.makeOTFromCMChange = function(cm, changeObj) {
 };
 
 
-/*  This function checks effective area of `ots.slice(fromIndex, toIndex)`
- *  and returns whether the range of OTs could be converted to an exercise.
- *
- *  Args
- *    - ots (list) -- list of Elicast OT
- *    - fromIndex (number) -- the starting index of TSel in `ots` (inclusive)
- *    - toIndex (number) -- the ending index of TSel in `ots` (exclusive)
- *
- *  Return := true if `ots.slice(fromIndex, toIndex)` could be an exercise
- *
- */
-ElicastOT.checkExerciseable = function(ots, fromIndex, toIndex) {
-  console.error("Not implemented");
-};
+ElicastOT.isChangeAllowed = function(ots, exerciseStartIndex, cm, changeObj) {
+  const cmContent = cm.doc.getValue();
+  const fromPos = lineChToPos(cmContent, changeObj.from);
+  const toPos = lineChToPos(cmContent, changeObj.to);
 
+  if (exerciseStartIndex < 0) {
+    // Prevent to edit inside of existing exercise areas
+    const exerciseAreas = getExerciseAreas(ots);
+    for (const area of exerciseAreas) {
+      if (isAreaConflict(area, fromPos, toPos)) {
+        return false;
+      }
+    }
 
-/*  This function convert ESel(Editor-Selection) to TSel(Timeline-Selection).
- *
- *  Args
- *    - ots (list) -- list of Elicast OT
- *    - currentIndex (number) -- current state represented as an index in `ots`
- *    - fromPos (number) -- starting position of ESel
- *    - toPos (number) -- ending position of ESel
- *
- *  Return := list of (fromIndex, toIndex) tuples
- *
- */
-ElicastOT.convertESelToTSel = function(ots, currentIndex, fromPos, toPos) {
-  console.error("Not implemented");
-};
+    return true;
+
+  } else {
+    // Only allow current exercise area
+    const exOts = ots.slice(exerciseStartIndex);
+
+    // // Allow inserting text at anyware if there is no text OT yet
+    // let isExStarted = false;
+    // for (const ot of exOts) {
+    //   if (ot.command === "text") {
+    //     isExStarted = true;
+    //     break;
+    //   }
+    // }
+    //
+    // if (!isExStarted) {
+    //   return true;
+    // }
+
+  }
+}

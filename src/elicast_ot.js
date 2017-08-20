@@ -250,6 +250,23 @@ ElicastOT.applyOtToCM = function(cm, ot) {
 };
 
 
+ElicastOT.revertOtToCM = function(cm, ot) {
+  const cmContent = cm.doc.getValue()
+
+  if (ot.command === "text") {
+    if (cmContent.substring(ot.fromPos, ot.fromPos + ot.insertedText.length) !== ot.insertedText) {
+      console.error('The removed text is not matched')
+      return
+    }
+
+    const fromLineCh = posToLineCh(cmContent, ot.fromPos)
+    const toLineCh = posToLineCh(cmContent, ot.fromPos + ot.insertedText.length)
+
+    cm.doc.replaceRange(ot.removedText, fromLineCh, toLineCh)
+  }
+}
+
+
 /*  This function convert CodeMirror's current selection to Elicast
  *  "selection" OT. To only capture the selection changes, call this
  *  function when `CodeMirror.doc.beforeSelectionChange` event is fired.

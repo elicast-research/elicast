@@ -1,6 +1,7 @@
 <template>
   <div id="editor">
-    <codemirror v-model="code"
+    <codemirror ref="cm"
+                v-model="code"
                 :options="editorOptions"
                 @beforeChange="onEditorBeforeChange"
                 @cursorActivity="onEditorCursorActivity">
@@ -14,6 +15,9 @@
         <i v-show="isRecord" class="fa fa-video-camera text-danger" aria-hidden="true"></i>
       </a>
       <Slider ref="slider" class="slider" @change="handleSliderChange" :disabled="isRecord" />
+      <div class="ts-display text-secondary">
+        {{ tsDisplay }}
+      </div>
     </div>
 
     <button class="btn btn-primary btn-sm"
@@ -55,14 +59,18 @@ export default {
   data () {
     return {
       code: INITIAL_CODE,
-      ots: [ new ElicastText(1, 0, 0, INITIAL_CODE, '') ],
+      ots: [ new ElicastText(0, 0, 0, INITIAL_CODE, '') ],
       ts: 0,
       recordStartOt: undefined,
       exerciseStartIndex: -1,
       playMode: PlayMode.STANDBY
     }
   },
+
   computed: {
+    cm() {
+      return this.$refs.cm.editor
+    },
     editorOptions() {
       return Object.assign({
         readOnly: this.playMode === PlayMode.RECORD ? false : 'nocursor'
@@ -79,10 +87,18 @@ export default {
     },
     isRecord() {
       return this.playMode === PlayMode.RECORD
+    },
+    tsDisplay() {
+      const hour = Math.floor(this.ts / 1000 / 60 / 60)
+      const min = Math.floor((this.ts / 1000 / 60) % 60)
+      const sec = Math.floor((this.ts / 1000) % 60)
+      return [hour, [min, String(sec).padStart(2, '0')].join(':')]
+        .filter(Boolean).join(':')
     }
   },
+
   watch: {
-    ots(ots) {
+    ots(ots, prevOts) {
       const lastOt = ots[ots.length - 1]
       this.$refs.slider.max = lastOt.ts
       this.$refs.slider.val = lastOt.ts
@@ -90,13 +106,26 @@ export default {
 
       this.ts = lastOt.ts
     },
-    ts(ts) {
+
+    ts(ts, prevTs) {
       this.$refs.slider.val = ts
 
       switch (this.playMode) {
         case PlayMode.PLAYBACK:
         case PlayMode.PAUSE:
         case PlayMode.STANDBY:
+          let prevOtIdx = this.ots.findIndex(ot => prevTs < ot.ts)
+          prevOtIdx = (prevOtIdx < 0 ? this.ots.length : prevOtIdx) - 1
+          let newOtIdx = this.ots.findIndex(ot => ts < ot.ts)
+          newOtIdx = (newOtIdx < 0 ? this.ots.length : newOtIdx) - 1
+
+          for (let i = prevOtIdx + 1; i <= newOtIdx && i < this.ots.length; i++) {
+            ElicastOT.applyOtToCM(this.cm, this.ots[i])
+          }
+          for (let i = prevOtIdx; i > newOtIdx && i >= 0; i--) {
+            ElicastOT.revertOtToCM(this.cm, this.ots[i])
+          }
+
           if (ts === this.$refs.slider.max) {
             this.playMode = PlayMode.STANDBY
           } else {
@@ -105,6 +134,7 @@ export default {
           break
       }
     },
+
     playMode(playMode, prevPlayMode) {
       if (playMode === PlayMode.RECORD) {
         const lastTs = this.ots.length ? this.ots[this.ots.length - 1].ts : 0
@@ -116,8 +146,7 @@ export default {
       }
     }
   },
-  mounted() {
-  },
+
   methods: {
     onEditorBeforeChange(cm, changeObj) {
       if (this.playMode !== PlayMode.RECORD) return
@@ -156,6 +185,7 @@ export default {
       this.playMode = toggleState[this.playMode]
     }
   },
+
   components: {
     codemirror,
     Slider
@@ -181,6 +211,12 @@ export default {
 
   .slider {
     flex: auto;
+  }
+
+  .ts-display {
+    width: 2rem;
+    text-align: center;
+    font-size: 0.7rem;
   }
 }
 </style>

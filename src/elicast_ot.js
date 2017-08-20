@@ -2,7 +2,8 @@
  *
  *  Structure := { ts: 123456789, command: "selection", **commandArgs... }
  *
- *  Four types of commands := "selection", "text", "exPlaceholder", "exShow"
+ *  Five types of commands := "nop", "selection", "text", "exPlaceholder", "exShow"
+ *   - "nop" :
  *   - "selection" : fromPos, toPos
  *   - "text" : fromPos, toPos, insertedText, removedText
  *   - "exPlaceholder" : exId, solutionOts
@@ -30,7 +31,10 @@ function validateOt(ot) {
     return false;
   }
 
-  if (ot.command === "selection") {
+  if (ot.command === "nop") {
+    return true;
+
+  } else if (ot.command === "selection") {
     return (typeof ot.fromPos === "number" && typeof ot.toPos === "number" &&
       ot.fromPos >= 0 && ot.fromPos <= ot.toPos);
 
@@ -179,7 +183,10 @@ ElicastOT.applyOtToCM = function(cm, ot) {
 
   const cmContent = cm.doc.getValue();
 
-  if (ot.command === "selection") {
+  if (ot.command === "nop") {
+    return;
+
+  } else if (ot.command === "selection") {
     if (cmContent.length < ot.fromPos || cmContent.length < ot.toPos) {
       console.error("The selection is out of range");
       return;

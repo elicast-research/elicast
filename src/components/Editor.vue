@@ -26,9 +26,10 @@
 </template>
 
 <script>
-import ElicastOT from '@/elicast_ot'
+import ElicastOT, { ElicastNop, ElicastText } from '@/elicast_ot'
 import { codemirror, CodeMirror } from 'vue-codemirror'
 import 'codemirror/addon/selection/mark-selection'
+import 'codemirror/mode/python/python'
 import Slider from '@/components/slider'
 
 const PlayMode = {
@@ -38,23 +39,35 @@ const PlayMode = {
   RECORD: 'record'
 }
 
+const EDITOR_OPTIONS = {
+  mode: 'python',
+  lineNumbers: true,
+  cursorBlinkRate: 0, // disable default blinker which is not working in no-focus state
+  autofocus: true,
+}
+
+const INITIAL_CODE = `def hello(thing):
+print(f"hello, {thing}!")
+
+hello("world")`
+
 export default {
   data () {
     return {
-      code: 'const a = 10',
-      editorOptions: {
-        // mode: 'python'
-        lineNumbers: true,
-        cursorBlinkRate: 0, // disable default blinker which is not working in no-focus state
-        autofocus: true
-      },
-      ots: [],
-      exerciseStartIndex: -1,
+      code: INITIAL_CODE,
+      ots: [ new ElicastText(1, 0, 0, INITIAL_CODE, '') ],
       ts: 0,
+      recordStartOt: undefined,
+      exerciseStartIndex: -1,
       playMode: PlayMode.STANDBY
     }
   },
   computed: {
+    editorOptions() {
+      return Object.assign({
+        readOnly: this.playMode === PlayMode.RECORD ? false : 'nocursor'
+      }, EDITOR_OPTIONS)
+    },
     isPause() {
       return this.playMode === PlayMode.PLAYBACK
     },
@@ -69,37 +82,66 @@ export default {
     }
   },
   watch: {
-    ts(newTs) {
-      if (newTs === this.$refs.slider.max) {
-        this.playMode = PlayMode.STANDBY
-      } else {
-        this.playMode = PlayMode.PAUSE
+    ots(ots) {
+      const lastOt = ots[ots.length - 1]
+      this.$refs.slider.max = lastOt.ts
+      this.$refs.slider.val = lastOt.ts
+      console.log(lastOt.command, lastOt.ts)
+
+      this.ts = lastOt.ts
+    },
+    ts(ts) {
+      this.$refs.slider.val = ts
+
+      switch (this.playMode) {
+        case PlayMode.PLAYBACK:
+        case PlayMode.PAUSE:
+        case PlayMode.STANDBY:
+          if (ts === this.$refs.slider.max) {
+            this.playMode = PlayMode.STANDBY
+          } else {
+            this.playMode = PlayMode.PAUSE
+          }
+          break
+      }
+    },
+    playMode(playMode, prevPlayMode) {
+      if (playMode === PlayMode.RECORD) {
+        const lastTs = this.ots.length ? this.ots[this.ots.length - 1].ts : 0
+        this.recordStartOt = new ElicastNop(lastTs)
+        this.ots.push(this.recordStartOt)
+      } else if (prevPlayMode === PlayMode.RECORD) {
+        const ts = this.recordStartOt.getRelativeTS()
+        this.ots.push(new ElicastNop(ts))
       }
     }
   },
   mounted() {
-    this.$refs.slider.max = 100
-    this.$refs.slider.val = 100
   },
   methods: {
     onEditorBeforeChange(cm, changeObj) {
+      if (this.playMode !== PlayMode.RECORD) return
+
       if (!ElicastOT.isChangeAllowed(this.ots, this.exerciseStartIndex, cm, changeObj)) {
         changeObj.cancel();
         return;
       }
-      const newOt = ElicastOT.makeOTFromCMChange(cm, changeObj);
-      this.ots.push(newOt);
+      const ts = this.recordStartOt.getRelativeTS()
+      const newOt = ElicastOT.makeOTFromCMChange(cm, changeObj, ts)
+      this.ots.push(newOt)
     },
     onEditorCursorActivity(cm) {
-      const newOt = ElicastOT.makeOTFromCMSelection(cm);
-      this.ots.push(newOt);
+      if (this.playMode !== PlayMode.RECORD) return
+
+      const ts = this.recordStartOt.getRelativeTS()
+      const newOt = ElicastOT.makeOTFromCMSelection(cm, ts)
+      this.ots.push(newOt)
     },
     onExerciseStartClick(event) {
       this.exerciseStartIndex = this.ots.length;
     },
     onExerciseStopClick(event) {
       this.exerciseStartIndex = -1;
-      console.log('OT', ElicastOT.makeOTFromCMSelection(cm));
     },
     handleSliderChange(val) {
       this.ts = val

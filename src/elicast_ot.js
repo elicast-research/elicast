@@ -1,3 +1,5 @@
+import _ from 'lodash'
+
 /*  OT for Elicast
  *
  *  Structure := { ts: 123456789, command: "selection", **commandArgs... }
@@ -13,54 +15,89 @@
  *
  */
 
-export default function ElicastOT() {
+export default class ElicastOT {
+  constructor(ts, command) {
+    if (!_.isInteger(ts)) throw new Error('Invalid ts')
+    if (!_.isString(command)) throw new Error('Invalid command')
 
+    this.ts = ts
+    this.command = command
+  }
 }
 
+export class ElicastNop extends ElicastOT {
+  constructor(ts, time = new Date().getTime()) {
+    super(ts, 'nop')
 
-/*  This function validate Elicast OT
- *
- *  Args
- *    - ot (object)
- *
- *  Return := true if `ot` is valid Elicast OT
- *
- */
-function validateOt(ot) {
-  if (typeof ot !== "object" || typeof ot.ts !== "number" || typeof ot.command !== "string") {
-    return false;
+    time = time
+    if (!_.isInteger(time)) throw new Error('Invalid time')
+
+    this.time = time
   }
 
-  if (ot.command === "nop") {
-    return true;
+  getRelativeTS(time = new Date().getTime()) {
+    return this.ts + time - this.time
+  }
+}
 
-  } else if (ot.command === "selection") {
-    return (typeof ot.fromPos === "number" && typeof ot.toPos === "number" &&
-      ot.fromPos >= 0 && ot.fromPos <= ot.toPos);
+export class ElicastSelection extends ElicastOT {
+  constructor(ts, fromPos, toPos) {
+    super(ts, 'selection')
 
-  } else if (ot.command === "text") {
-    return (typeof ot.fromPos === "number" && typeof ot.toPos === "number" &&
-      typeof ot.insertedText === "string" && typeof ot.removedText === "string" &&
-      ot.fromPos >= 0 && ot.fromPos <= ot.toPos);
+    if (!_.isInteger(fromPos)) throw new Error('Invalid fromPos')
+    if (!_.isInteger(toPos)) throw new Error('Invalid toPos')
+    if (!(fromPos >= 0 && toPos >= 0)) throw new Error('fromPos and toPos must be non-negative')
+    if (!(fromPos <= toPos)) throw new Error('toPos must be greater than fromPos')
 
-  } else if (ot.command === "exPlaceholder") {
-    if (!(typeof ot.exId === "number" && ot.exId >= 0)) {
-      return false;
-    }
+    this.fromPos = fromPos
+    this.toPos = toPos
+  }
+}
 
-    for (const solutionOt of ot.solutionOts) {
-      if (!validateOt(solutionOt)) {
-        return false;
-      }
-    }
-    return true;
+export class ElicastText extends ElicastOT {
+  constructor(ts, fromPos, toPos, insertedText, removedText) {
+    super(ts, 'text')
 
-  } else if (ot.command === "exShow") {
-    return (typeof ot.exId === "number" && typeof ot.description === "string" &&
-      typeof ot.exId >= 0);
+    if (!_.isInteger(fromPos)) throw new Error('Invalid fromPos')
+    if (!_.isInteger(toPos)) throw new Error('Invalid toPos')
+    if (!(fromPos >= 0 && toPos >= 0)) throw new Error('fromPos and toPos must be non-negative')
+    if (!(fromPos <= toPos)) throw new Error('toPos must be greater than fromPos')
+    if (!_.isString(insertedText)) throw new Error('Invalid insertedText')
+    if (!_.isString(removedText)) throw new Error('Invalid removedText')
 
-  } else {
-    return false;
+    this.fromPos = fromPos
+    this.toPos = toPos
+    this.insertedText = insertedText
+    this.removedText = removedText
+  }
+}
+
+export class ElicastExPlaceHolder extends ElicastOT {
+  constructor(ts, exId, solutionOts) {
+    super(ts, 'exPlaceholder')
+
+    if (!_.isInteger(exId)) throw new Error('Invalid exId')
+    if (!(exId >= 0)) throw new Error('Invalid exId')
+    if (!_.isArray(solutionOts)) throw new Error('Invalid solutionOts')
+    solutionOts.forEach(ot => {
+      if (!(ot instanceof ElicastOT)) throw new Error('Invalid solutionOts')
+    })
+
+    this.exId = exId
+    this.solutionOts = solutionOts
+  }
+}
+
+export class ElicastExShow extends ElicastOT {
+  constructor(ts, exId, description) {
+    super(ts, 'exShow')
+
+    if (!_.isInteger(exId)) throw new Error('Invalid exId')
+    if (!(exId >= 0)) throw new Error('Invalid exId')
+    if (!_.isString(description)) throw new Error('Invalid description')
+
+    this.exId = exId
+    this.description = description
   }
 }
 
@@ -176,11 +213,6 @@ function getAreas(ots) {
  *
  */
 ElicastOT.applyOtToCM = function(cm, ot) {
-  if (!validateOt(ot)) {
-    console.error("Invalid OT");
-    return;
-  }
-
   const cmContent = cm.doc.getValue();
 
   if (ot.command === "nop") {
@@ -224,6 +256,7 @@ ElicastOT.applyOtToCM = function(cm, ot) {
  *
  *  Args
  *    - cm (CodeMirror) -- The CodeMirror instance
+ *    - ts (Number) -- Timestamp
  *
  *  Return := Elicast "selection" OT
  *
@@ -232,19 +265,14 @@ ElicastOT.applyOtToCM = function(cm, ot) {
  *      the first selection.
  *
  */
-ElicastOT.makeOTFromCMSelection = function(cm) {
+ElicastOT.makeOTFromCMSelection = function(cm, ts) {
   const cmContent = cm.doc.getValue();
   const selectionRange = cm.doc.listSelections()[0];
 
   const fromPos = lineChToPos(cmContent, selectionRange.anchor);
   const toPos = lineChToPos(cmContent, selectionRange.head);
 
-  return {
-    ts: (new Date()).getTime(),
-    command: "selection",
-    fromPos: fromPos,
-    toPos: toPos
-  };
+  return new ElicastSelection(ts, fromPos, toPos)
 };
 
 
@@ -254,6 +282,7 @@ ElicastOT.makeOTFromCMSelection = function(cm) {
  *  Args
  *    - cm (CodeMirror) -- The CodeMirror instance
  *    - changeObj (object) -- The object passed from beforeChange event
+ *    - ts (Number) -- Timestamp
  *
  *  Return := Elicast "text" OT
  *
@@ -262,20 +291,13 @@ ElicastOT.makeOTFromCMSelection = function(cm) {
  *      line/ch-cordinate to position-cordinate, we need "before changed" content
  *      of the editor.
  */
-ElicastOT.makeOTFromCMChange = function(cm, changeObj) {
+ElicastOT.makeOTFromCMChange = function(cm, changeObj, ts) {
   const cmContent = cm.doc.getValue();
 
   const fromPos = lineChToPos(cmContent, changeObj.from);
   const toPos = lineChToPos(cmContent, changeObj.to);
 
-  return {
-    ts: (new Date()).getTime(),
-    command: "text",
-    fromPos: fromPos,
-    toPos: toPos,
-    insertedText: changeObj.text.join("\n"),
-    removedText: cmContent.substring(fromPos, toPos)
-  };
+  return new ElicastText(ts, fromPos, toPos, changeObj.text.join("\n"), cmContent.substring(fromPos, toPos))
 };
 
 

@@ -50,23 +50,44 @@ export default {
   },
 
   watch: {
+    min(min) {
+      if (this.val < min) {
+        this.val = min
+      } else {
+        this.$emit('change', this.val)
+        this.draw()
+      }
+    },
+    max(max) {
+      if (this.val > max) {
+        this.val = max
+      } else {
+        this.$emit('change', this.val)
+        this.draw()
+      }
+    },
+    val(val, prevVal) {
+      this.$emit('change', val)
+      this.draw()
+    },
     width() { this.drawDebounce() },
     height() { this.drawDebounce() },
     disabled() { this.draw() }
   },
 
   mounted() {
-    window.addEventListener('resize', this.handleResize)
+    window.addEventListener('resize', this.handleWindowResize)
 
     this.width = this.$el.clientWidth
   },
 
   beforeDestroy() {
-    window.removeEventListener('resize', this.handleResize)
+    window.removeEventListener('resize', this.handleWindowResize)
   },
 
   methods: {
     handleWindowResize(e) {
+      console.log(this.$el.clientWidth)
       this.width = this.$el.clientWidth
     },
 
@@ -111,13 +132,7 @@ export default {
     slide(offset) {
       if (this.disabled) return false
 
-      let val = this.offsetToVal(offset)
-      if (this.val !== val) {
-        this.$emit('change', val)
-        this.val = val
-
-        this.draw()
-      }
+      this.val = this.offsetToVal(offset)
     },
 
     offsetToVal(offset) {
@@ -161,6 +176,8 @@ export default {
   cursor: default;
 }
 .slider {
+  overflow: hidden; // for resize
+
   canvas {
     cursor: pointer;
   }

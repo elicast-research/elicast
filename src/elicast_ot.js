@@ -18,7 +18,7 @@ import OTArea from './ot_area.js'
  */
 
 export default class ElicastOT {
-  constructor(ts, command) {
+  constructor (ts, command) {
     if (!_.isInteger(ts)) throw new Error('Invalid ts')
     if (!_.isString(command)) throw new Error('Invalid command')
 
@@ -28,22 +28,21 @@ export default class ElicastOT {
 }
 
 export class ElicastNop extends ElicastOT {
-  constructor(ts, time = Date.now()) {
+  constructor (ts, time = Date.now()) {
     super(ts, 'nop')
 
-    time = time
     if (!_.isInteger(time)) throw new Error('Invalid time')
 
     this.time = time
   }
 
-  getRelativeTS(time = Date.now()) {
+  getRelativeTS (time = Date.now()) {
     return this.ts + time - this.time
   }
 }
 
 export class ElicastSelection extends ElicastOT {
-  constructor(ts, fromPos, toPos) {
+  constructor (ts, fromPos, toPos) {
     super(ts, 'selection')
 
     if (!_.isInteger(fromPos)) throw new Error('Invalid fromPos')
@@ -56,7 +55,7 @@ export class ElicastSelection extends ElicastOT {
 }
 
 export class ElicastText extends ElicastOT {
-  constructor(ts, fromPos, toPos, insertedText, removedText) {
+  constructor (ts, fromPos, toPos, insertedText, removedText) {
     super(ts, 'text')
 
     if (!_.isInteger(fromPos)) throw new Error('Invalid fromPos')
@@ -74,7 +73,7 @@ export class ElicastText extends ElicastOT {
 }
 
 export class ElicastExPlaceHolder extends ElicastOT {
-  constructor(ts, exId, solutionOts) {
+  constructor (ts, exId, solutionOts) {
     super(ts, 'exPlaceholder')
 
     if (!_.isInteger(exId)) throw new Error('Invalid exId')
@@ -90,7 +89,7 @@ export class ElicastExPlaceHolder extends ElicastOT {
 }
 
 export class ElicastExShow extends ElicastOT {
-  constructor(ts, exId, description) {
+  constructor (ts, exId, description) {
     super(ts, 'exShow')
 
     if (!_.isInteger(exId)) throw new Error('Invalid exId')
@@ -102,7 +101,6 @@ export class ElicastExShow extends ElicastOT {
   }
 }
 
-
 /*  This function convert position in `content` to line/ch
  *
  *  Args
@@ -112,24 +110,23 @@ export class ElicastExShow extends ElicastOT {
  *  Return := { line, ch } object
  *
  */
-function posToLineCh(content, pos) {
-  let curLine = 0;
-  let curCh = pos;
+function posToLineCh (content, pos) {
+  let curLine = 0
+  let curCh = pos
 
-  const lineSep = /\r\n?|\n/g;
+  const lineSep = /\r\n?|\n/g
   for (curLine = 0; lineSep.exec(content) !== null; curLine++) {
     if (pos < lineSep.lastIndex) {
-      break;
+      break
     }
-    curCh = pos - lineSep.lastIndex;
+    curCh = pos - lineSep.lastIndex
   }
 
   return {
     line: curLine,
     ch: curCh
-  };
+  }
 }
-
 
 /*  This function convert line/ch in `content` to 0-based position
  *
@@ -140,47 +137,43 @@ function posToLineCh(content, pos) {
  *  Return := number
  *
  */
-function lineChToPos(content, lineCh) {
-  const lineSep = /\r\n?|\n/g;
+function lineChToPos (content, lineCh) {
+  const lineSep = /\r\n?|\n/g
   for (let i = 0; i < lineCh.line; i++) {
-    lineSep.exec(content);
+    lineSep.exec(content)
   }
-  return lineSep.lastIndex + lineCh.ch;
+  return lineSep.lastIndex + lineCh.ch
 }
 
-
-function isAreaConflict(area, fromPos, toPos) {
+function isAreaConflict (area, fromPos, toPos) {
   return (fromPos <= area.fromPos && area.fromPos < toPos) ||
-    (area.fromPos < fromPos && fromPos < area.toPos);
+    (area.fromPos < fromPos && fromPos < area.toPos)
 }
 
-
-function getAreas(ots) {
-  const areas = [];
+function getAreas (ots) {
+  const areas = []
   for (const ot of ots) {
-    if (ot.command === "text") {
-      if (0 < ot.removedText.length) {
-        OTArea.remove(areas, "text", ot.fromPos, ot.fromPos + ot.removedText.length);
+    if (ot.command === 'text') {
+      if (ot.removedText.length > 0) {
+        OTArea.remove(areas, 'text', ot.fromPos, ot.fromPos + ot.removedText.length)
       }
-      if (0 < ot.insertedText.length) {
-        OTArea.insert(areas, "text", ot.fromPos, ot.fromPos + ot.insertedText.length, true);
+      if (ot.insertedText.length > 0) {
+        OTArea.insert(areas, 'text', ot.fromPos, ot.fromPos + ot.insertedText.length, true)
+      }
+    } else if (ot.command === 'exPlaceholder') {
+      const exerciseAreas = getAreas(ot.solutionOts)
+      if (exerciseAreas.length !== 1 || exerciseAreas[0].type !== 'text') {
+        console.error('Solution OT must be a single text area')
+        return
       }
 
-    } else if (ot.command === "exPlaceholder") {
-      const exerciseAreas = getAreas(ot.solutionOts);
-      if (exerciseAreas.length !== 1 || exerciseAreas[0].type !== "text") {
-        console.error("Solution OT must be a single text area");
-        return;
-      }
-
-      const exerciseArea = exerciseAreas[0];
-      OTArea.insert(areas, "exercise", exerciseArea.fromPos, exerciseArea.toPos, false);
+      const exerciseArea = exerciseAreas[0]
+      OTArea.insert(areas, 'exercise', exerciseArea.fromPos, exerciseArea.toPos, false)
     }
   }
 
-  return areas;
+  return areas
 }
-
 
 /*  This function apply given OT to CodeMirror
  *
@@ -189,51 +182,44 @@ function getAreas(ots) {
  *    - ot (object) -- Elicast OT
  *
  */
-ElicastOT.applyOtToCM = function(cm, ot) {
-  const cmContent = cm.doc.getValue();
-
-  if (ot.command === "nop") {
-    return;
-
-  } else if (ot.command === "selection") {
-    if (cmContent.length < ot.fromPos || cmContent.length < ot.toPos) {
-      console.error("The selection is out of range");
-      return;
-    }
-
-    const fromLineCh = posToLineCh(cmContent, ot.fromPos);
-    const toLineCh = posToLineCh(cmContent, ot.toPos);
-    cm.doc.setSelection(fromLineCh, toLineCh);
-
-  } else if (ot.command === "text") {
-    if (cmContent.substring(ot.fromPos, ot.toPos) !== ot.removedText) {
-      console.error("The removed text is not matched");
-      return;
-    }
-
-    const fromLineCh = posToLineCh(cmContent, ot.fromPos);
-    const toLineCh = posToLineCh(cmContent, ot.toPos);
-    cm.doc.replaceRange(ot.insertedText, fromLineCh, toLineCh);
-
-  } else if (ot.command === "exPlaceholder") {
-    console.error("Not implemented");
-
-  } else if (ot.command === "exShow") {
-    console.error("Not implemented");
-
-  } else {
-    console.error("Invalid OT command", ot.command);
-  }
-};
-
-
-ElicastOT.revertOtToCM = function(cm, ot) {
+ElicastOT.applyOtToCM = function (cm, ot) {
   const cmContent = cm.doc.getValue()
 
-  if (ot.command === "selection") {
-    ElicastOT.applyOtToCM(cm, ot)
+  if (ot.command === 'nop') {
+    return
+  } else if (ot.command === 'selection') {
+    if (cmContent.length < ot.fromPos || cmContent.length < ot.toPos) {
+      console.error('The selection is out of range')
+      return
+    }
 
-  } else if (ot.command === "text") {
+    const fromLineCh = posToLineCh(cmContent, ot.fromPos)
+    const toLineCh = posToLineCh(cmContent, ot.toPos)
+    cm.doc.setSelection(fromLineCh, toLineCh)
+  } else if (ot.command === 'text') {
+    if (cmContent.substring(ot.fromPos, ot.toPos) !== ot.removedText) {
+      console.error('The removed text is not matched')
+      return
+    }
+
+    const fromLineCh = posToLineCh(cmContent, ot.fromPos)
+    const toLineCh = posToLineCh(cmContent, ot.toPos)
+    cm.doc.replaceRange(ot.insertedText, fromLineCh, toLineCh)
+  } else if (ot.command === 'exPlaceholder') {
+    console.error('Not implemented')
+  } else if (ot.command === 'exShow') {
+    console.error('Not implemented')
+  } else {
+    console.error('Invalid OT command', ot.command)
+  }
+}
+
+ElicastOT.revertOtToCM = function (cm, ot) {
+  const cmContent = cm.doc.getValue()
+
+  if (ot.command === 'selection') {
+    ElicastOT.applyOtToCM(cm, ot)
+  } else if (ot.command === 'text') {
     if (cmContent.substring(ot.fromPos, ot.fromPos + ot.insertedText.length) !== ot.insertedText) {
       console.error('The removed text is not matched')
       return
@@ -245,7 +231,6 @@ ElicastOT.revertOtToCM = function(cm, ot) {
     cm.doc.replaceRange(ot.removedText, fromLineCh, toLineCh)
   }
 }
-
 
 /*  This function convert CodeMirror's current selection to Elicast
  *  "selection" OT. To only capture the selection changes, call this
@@ -262,23 +247,21 @@ ElicastOT.revertOtToCM = function(cm, ot) {
  *      the first selection.
  *
  */
-ElicastOT.makeOTFromCMSelection = function(cm, ts) {
-  const cmContent = cm.doc.getValue();
-  const selectionRange = cm.doc.listSelections()[0];
+ElicastOT.makeOTFromCMSelection = function (cm, ts) {
+  const cmContent = cm.doc.getValue()
+  const selectionRange = cm.doc.listSelections()[0]
 
-  const fromPos = lineChToPos(cmContent, selectionRange.anchor);
-  const toPos = lineChToPos(cmContent, selectionRange.head);
+  const fromPos = lineChToPos(cmContent, selectionRange.anchor)
+  const toPos = lineChToPos(cmContent, selectionRange.head)
 
   return new ElicastSelection(ts, fromPos, toPos)
-};
+}
 
+ElicastOT.makeOTFromExercise = function (ots, exerciseStartIndex, ts) {
+  const solutionOts = ots.splice(exerciseStartIndex)
 
-ElicastOT.makeOTFromExercise = function(ots, exerciseStartIndex, ts) {
- const solutionOts = ots.splice(exerciseStartIndex)
-
- return new ElicastExPlaceHolder(ts, 1, solutionOts)
-};
-
+  return new ElicastExPlaceHolder(ts, 1, solutionOts)
+}
 
 /*  This function convert CodeMirror's selection object
  *  (from `cm.beforeChange` event) to Elicast "text" OT.
@@ -295,45 +278,44 @@ ElicastOT.makeOTFromExercise = function(ots, exerciseStartIndex, ts) {
  *      line/ch-cordinate to position-cordinate, we need "before changed" content
  *      of the editor.
  */
-ElicastOT.makeOTFromCMChange = function(cm, changeObj, ts) {
-  const cmContent = cm.doc.getValue();
+ElicastOT.makeOTFromCMChange = function (cm, changeObj, ts) {
+  const cmContent = cm.doc.getValue()
 
-  const fromPos = lineChToPos(cmContent, changeObj.from);
-  const toPos = lineChToPos(cmContent, changeObj.to);
+  const fromPos = lineChToPos(cmContent, changeObj.from)
+  const toPos = lineChToPos(cmContent, changeObj.to)
 
-  return new ElicastText(ts, fromPos, toPos, changeObj.text.join("\n"), cmContent.substring(fromPos, toPos))
-};
+  return new ElicastText(ts, fromPos, toPos, changeObj.text.join('\n'), cmContent.substring(fromPos, toPos))
+}
 
-
-ElicastOT.isChangeAllowed = function(ots, exerciseStartIndex, cm, changeObj) {
-  const cmContent = cm.doc.getValue();
-  const fromPos = lineChToPos(cmContent, changeObj.from);
-  const toPos = lineChToPos(cmContent, changeObj.to);
+ElicastOT.isChangeAllowed = function (ots, exerciseStartIndex, cm, changeObj) {
+  const cmContent = cm.doc.getValue()
+  const fromPos = lineChToPos(cmContent, changeObj.from)
+  const toPos = lineChToPos(cmContent, changeObj.to)
 
   if (exerciseStartIndex < 0) {
     // Prevent to edit inside of existing exercise areas
-    const areas = getAreas(ots);
+    const areas = getAreas(ots)
     for (const area of areas) {
-      if (area.type === "exercise" && isAreaConflict(area, fromPos, toPos)) {
-        console.log(fromPos, toPos, area);
-        return false;
+      if (area.type === 'exercise' && isAreaConflict(area, fromPos, toPos)) {
+        console.log(fromPos, toPos, area)
+        return false
       }
     }
 
-    return true;
+    return true
   } else {
     // Only allow current exercise area
-    const exOts = ots.slice(exerciseStartIndex);
-    const areas = getAreas(exOts);
+    const exOts = ots.slice(exerciseStartIndex)
+    const areas = getAreas(exOts)
 
     if (areas.length === 0) {
-      return true;
-    } else if (areas.length > 1 || areas[0].type !== "text") {
-      console.error("Exercise area is inconsistent");
-      return false;
+      return true
+    } else if (areas.length > 1 || areas[0].type !== 'text') {
+      console.error('Exercise area is inconsistent')
+      return false
     }
 
-    const exArea = areas[0];
-    return exArea.fromPos <= fromPos && toPos <= exArea.toPos;
+    const exArea = areas[0]
+    return exArea.fromPos <= fromPos && toPos <= exArea.toPos
   }
 }

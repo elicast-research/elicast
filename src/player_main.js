@@ -2,8 +2,7 @@
 // (runtime-only or standalone) has been set in webpack.base.conf with an alias.
 import Vue from 'vue'
 import ElicastPlayer from '@/components/Player'
-import ElicastOT from './elicast_ot'
-import './assets/main.scss';
+import './assets/main.scss'
 
 Vue.config.productionTip = false
 

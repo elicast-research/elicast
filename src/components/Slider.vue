@@ -14,7 +14,8 @@ import Color from 'color'
 
 const WIDTH_PADDING = 10
 const SLIDE_HEIGHT = 4
-const THUMB_WIDTH = 4, THUMB_HEIGHT = 10
+const THUMB_WIDTH = 4
+const THUMB_HEIGHT = 10
 const DISABLED_ALPHA = 0.5
 
 let isMouseDown = false
@@ -31,7 +32,7 @@ export default {
     }
   },
 
-  data() {
+  data () {
     return {
       width: 0, // resized
       height: 10,
@@ -43,19 +44,19 @@ export default {
   },
 
   computed: {
-    slideWidth() {
+    slideWidth () {
       return this.width - WIDTH_PADDING
     },
-    slideLeft() {
+    slideLeft () {
       return WIDTH_PADDING / 2
     },
-    slideRight() {
+    slideRight () {
       return this.width - WIDTH_PADDING / 2
     }
   },
 
   watch: {
-    min(min) {
+    min (min) {
       if (this.val < min) {
         this.val = min
       } else {
@@ -63,7 +64,7 @@ export default {
         this.draw()
       }
     },
-    max(max) {
+    max (max) {
       if (this.val > max) {
         this.val = max
       } else {
@@ -71,16 +72,16 @@ export default {
         this.draw()
       }
     },
-    val(val, prevVal) {
+    val (val, prevVal) {
       this.$emit('change', val, isMouseDown)
       this.draw()
     },
-    width() { this.drawDebounce() },
-    height() { this.drawDebounce() },
-    disabled() { this.draw() }
+    width () { this.drawDebounce() },
+    height () { this.drawDebounce() },
+    disabled () { this.draw() }
   },
 
-  mounted() {
+  mounted () {
     window.addEventListener('resize', this.handleWindowResize)
 
     window.el = this.$refs.canvas
@@ -88,16 +89,16 @@ export default {
     this.width = this.$el.clientWidth
   },
 
-  beforeDestroy() {
+  beforeDestroy () {
     window.removeEventListener('resize', this.handleWindowResize)
   },
 
   methods: {
-    handleWindowResize(e) {
+    handleWindowResize (e) {
       this.layout()
     },
 
-    handleMousedown(e) {
+    handleMousedown (e) {
       if (e.which === 1 || e.buttons === 1) {
         e.preventDefault()
 
@@ -113,7 +114,7 @@ export default {
       return false
     },
 
-    handleDocumentMousemove(e) {
+    handleDocumentMousemove (e) {
       if (isMouseDown) {
         e.preventDefault()
 
@@ -124,7 +125,7 @@ export default {
       return false
     },
 
-    handleDocumentMouseup(e) {
+    handleDocumentMouseup (e) {
       isMouseDown = false
 
       document.removeEventListener('mousemove', this.handleDocumentMousemove)
@@ -135,30 +136,30 @@ export default {
       return false
     },
 
-    layout() {
+    layout () {
       this.width = this.$el.offsetWidth
     },
 
-    slide(offset) {
+    slide (offset) {
       if (this.disabled) return false
 
       this.val = this.offsetToVal(offset)
     },
 
-    offsetToVal(offset) {
+    offsetToVal (offset) {
       offset = Math.max(this.slideLeft, Math.min(offset, this.slideRight))
       offset -= this.slideLeft
       return Math.round(this.min + offset / this.slideWidth * (this.max - this.min))
     },
 
-    valToOffset(val) {
+    valToOffset (val) {
       val = (val - this.min) / (this.max - this.min)
       return val * this.slideWidth + this.slideLeft
     },
 
-    drawDebounce: _.debounce(function() { this.draw() }, 100),
+    drawDebounce: _.debounce(function () { this.draw() }, 100),
 
-    draw() {
+    draw () {
       let canvas = this.$refs.canvas
       let ctx = canvas.getContext('2d')
 

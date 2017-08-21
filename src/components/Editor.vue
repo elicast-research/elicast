@@ -9,28 +9,28 @@
       </codemirror>
 
       <button class="btn btn-sm btn-light"
-              v-show="isRecording"
+              v-show="playMode.isRecording()"
               @click="toggleRecordExercise">
-        <span v-show="isRecord" class="text-danger">EX_START</span>
-        <span v-show="isRecordExercise" class="text-danger">EX_STOP</span>
+        <span v-show="playMode === PlayMode.RECORD" class="text-danger">EX_START</span>
+        <span v-show="playMode === PlayMode.RECORD_EXERCISE" class="text-danger">EX_STOP</span>
       </button>
     </div>
 
     <div class="controls">
       <button class="btn btn-sm btn-light"
               @click="togglePlayMode"
-              :disabled="isRecordExercise">
-        <i v-show="isPlayback" class="fa fa-play" aria-hidden="true"></i>
-        <i v-show="isPause" class="fa fa-pause" aria-hidden="true"></i>
-        <i v-show="isStandby" class="fa fa-video-camera" aria-hidden="true"></i>
-        <i v-show="isRecording" class="fa fa-video-camera text-danger" aria-hidden="true"></i>
+              :disabled="playMode === PlayMode.RECORD_EXERCISE">
+        <i v-show="playMode === PlayMode.PAUSE" class="fa fa-play" aria-hidden="true"></i>
+        <i v-show="playMode === PlayMode.PLAYBACK" class="fa fa-pause" aria-hidden="true"></i>
+        <i v-show="playMode === PlayMode.STANDBY" class="fa fa-video-camera" aria-hidden="true"></i>
+        <i v-show="playMode.isRecording()" class="fa fa-video-camera text-danger" aria-hidden="true"></i>
       </button>
 
       <Slider ref="slider"
               class="slider"
               @change="handleSliderChange"
               :color="sliderColor"
-              :disabled="isRecording" />
+              :disabled="playMode.isRecording()"></Slider>
 
       <div class="ts-display text-secondary">
         {{ tsDisplay }}
@@ -41,11 +41,12 @@
 
 <script>
 import ElicastOT, { ElicastNop, ElicastText, ElicastSelection } from '@/elicast_ot'
-import { codemirror, CodeMirror } from 'vue-codemirror'
+import { codemirror } from 'vue-codemirror'
 import 'codemirror/addon/selection/mark-selection'
 import 'codemirror/mode/python/python'
 import { Howl } from 'howler'
 import Slider from '@/components/slider'
+import _ from 'lodash'
 
 class PlayMode {
   static PLAYBACK = new PlayMode('playback')
@@ -54,15 +55,15 @@ class PlayMode {
   static RECORD = new PlayMode('record')
   static RECORD_EXERCISE = new PlayMode('record_exercise')
 
-  constructor(name) {
+  constructor (name) {
     this.name = name
   }
 
-  toString() {
+  toString () {
     return this.name
   }
 
-  isRecording() {
+  isRecording () {
     return [PlayMode.RECORD, PlayMode.RECORD_EXERCISE].includes(this)
   }
 }
@@ -72,7 +73,7 @@ const EDITOR_OPTIONS = {
   lineNumbers: true,
   cursorBlinkRate: 0, // disable default blinker which is not working in no-focus state
   showCursorWhenSelecting: true,
-  autofocus: true,
+  autofocus: true
 }
 
 const CURSOR_BLINK_RATE = 530 // CodeMirror default cursorBlinkRate: 530ms
@@ -84,10 +85,11 @@ const INITIAL_CODE = `def hello(thing):
 
 hello("world")`
 
-
 export default {
   data () {
     return {
+      PlayMode,
+
       code: INITIAL_CODE,
       ots: [
         new ElicastText(0, 0, 0, INITIAL_CODE, ''),
@@ -102,6 +104,7 @@ export default {
       recordAudioChunks: null,
       playbackStartTs: -1,
       playbackStartTime: -1,
+      playbackSound: null,
 
       cursorBlinkTimer: -1,
       recordTimer: -1,
@@ -110,53 +113,35 @@ export default {
   },
 
   computed: {
-    cm() {
+    cm () {
       return this.$refs.cm.editor
     },
-    editorOptions() {
+    editorOptions () {
       return Object.assign({
         readOnly: this.playMode.isRecording() ? false : 'nocursor'
       }, EDITOR_OPTIONS)
     },
-    isPause() {
-      return this.playMode === PlayMode.PLAYBACK
-    },
-    isPlayback() {
-      return this.playMode === PlayMode.PAUSE
-    },
-    isStandby() {
-      return this.playMode === PlayMode.STANDBY
-    },
-    isRecord() {
-      return this.playMode === PlayMode.RECORD
-    },
-    isRecordExercise() {
-      return this.playMode === PlayMode.RECORD_EXERCISE
-    },
-    isRecording() {
-      return this.playMode.isRecording()
-    },
-    tsDisplay() {
+    tsDisplay () {
       const hour = Math.floor(this.ts / 1000 / 60 / 60)
       const min = Math.floor((this.ts / 1000 / 60) % 60)
       const sec = Math.floor((this.ts / 1000) % 60)
       return [hour, [min, String(sec).padStart(2, '0')].join(':')]
         .filter(Boolean).join(':')
     },
-    sliderColor() {
+    sliderColor () {
       return this.playMode.isRecording() ? 'red' : 'black'
     }
   },
 
   watch: {
-    ots(ots, prevOts) {
+    ots (ots, prevOts) {
       const lastOt = ots[ots.length - 1]
       console.log(lastOt.command, lastOt.ts)
 
       this.ts = lastOt.ts
     },
 
-    ts(ts, prevTs) {
+    ts (ts, prevTs) {
       if (ts > this.maxTs) {
         this.maxTs = ts
         this.$refs.slider.max = ts
@@ -183,10 +168,10 @@ export default {
       }
     },
 
-    playMode(playMode, prevPlayMode) {
+    playMode (playMode, prevPlayMode) {
       if (!prevPlayMode.isRecording() && playMode === PlayMode.RECORD) {
         // start recording
-        function handleGetUserMedia(stream) {
+        const handleGetUserMedia = function (stream) {
           this.recordAudioChunks = []
           this.recordAudioRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' })
           this.recordAudioRecorder.ondataavailable = this.handleAudioDataAvailable
@@ -198,15 +183,14 @@ export default {
 
           if (this.recordTimer !== -1) throw new Error('recordTimer is not cleared')
           this.recordTimer = setInterval(this.recordTick, RECORD_TICK)
-        }
+        }.bind(this)
 
         navigator.mediaDevices.getUserMedia({ audio: true })
-          .then(handleGetUserMedia.bind(this))
-
+          .then(handleGetUserMedia)
       } else if (prevPlayMode === PlayMode.RECORD && !playMode.isRecording()) {
         // end recording
-        this.recordAudioRecorder.onstop = function(event) {
-          let blob = new Blob(this.recordAudioChunks, { type : 'audio/webm' })
+        this.recordAudioRecorder.onstop = function (event) {
+          let blob = new Blob(this.recordAudioChunks, { type: 'audio/webm' })
 
           if (!this.recordAudioBlob) this.recordAudioBlob = blob
           else this.recordAudioBlob = new Blob([this.recordAudioBlob, blob], { type: 'audio/webm' })
@@ -221,86 +205,84 @@ export default {
         }.bind(this)
 
         this.recordAudioRecorder.stop()
-
       } else if (prevPlayMode === PlayMode.RECORD && playMode === PlayMode.RECORD_EXERCISE) {
         // start recording exercise
         const ts = this.recordStartOt.getRelativeTS()
         this.recordExerciseStartOt = new ElicastNop(ts)
         this.ots.push(this.recordExerciseStartOt)
-
       } else if (prevPlayMode === PlayMode.RECORD_EXERCISE && playMode === PlayMode.RECORD) {
         const ts = this.recordStartOt.getRelativeTS()
         const newOt = ElicastOT.makeOTFromExercise(this.ots, this.recordExerciseStartOt, ts)
         this.ots.push(newOt)
         this.recordExerciseStartOt = null
-
       } else if (playMode === PlayMode.PLAYBACK) {
         // start playback
-        if (this.playbackTimer !== -1) throw new Error("playbackTimer is not cleared")
+        if (this.playbackTimer !== -1) throw new Error('playbackTimer is not cleared')
 
         const blobUrl = URL.createObjectURL(this.recordAudioBlob)
         const sound = new Howl({ src: [blobUrl], format: ['webm'] })
-        sound.on('load', function() {
+        sound.on('load', function () {
           sound.seek(this.ts / 1000)
           sound.play()
 
           this.playbackStartTs = this.ts
           this.playbackStartTime = Date.now()
+          this.playbackSound = sound
 
-          const tick = function() {
+          const tick = function () {
             this.playbackTick()
             this.playbackTimer = setTimeout(tick, PLAYBACK_TICK)
           }.bind(this)
           this.playbackTimer = setTimeout(tick, PLAYBACK_TICK)
         }.bind(this))
-
       } else if (prevPlayMode === PlayMode.PLAYBACK) {
         // pause playback
+        this.playbackSound.stop()
+
         clearTimeout(this.playbackTimer)
         this.playbackTimer = -1
-
       }
     }
   },
 
-  mounted(t) {
+  mounted (t) {
     this.cursorBlinkTimer = setInterval(this.toggleCursorBlink, CURSOR_BLINK_RATE)
   },
 
-  beforeDestroy() {
+  beforeDestroy () {
     clearInterval(this.cursorBlinkTimer)
   },
 
   methods: {
-    onEditorBeforeChange(cm, changeObj) {
+    onEditorBeforeChange (cm, changeObj) {
       if (!this.playMode.isRecording()) return
 
       if (!ElicastOT.isChangeAllowed(this.ots, this.exerciseStartIndex, cm, changeObj)) {
-        changeObj.cancel();
-        return;
+        changeObj.cancel()
+        return
       }
       const ts = this.recordStartOt.getRelativeTS()
       const newOt = ElicastOT.makeOTFromCMChange(cm, changeObj, ts)
       this.ots.push(newOt)
     },
-    onEditorCursorActivity(cm) {
+    onEditorCursorActivity (cm) {
       if (!this.playMode.isRecording()) return
 
       const ts = this.recordStartOt.getRelativeTS()
       const newOt = ElicastOT.makeOTFromCMSelection(cm, ts)
       this.ots.push(newOt)
     },
-    handleSliderChange(val, isMouseDown) {
+    handleSliderChange (val, isMouseDown) {
       if (isMouseDown) this.playMode = PlayMode.PAUSE
       this.ts = val
     },
-    handleAudioDataAvailable(event) {
+    handleAudioDataAvailable (event) {
       this.recordAudioChunks.push(event.data)
     },
-    recordTick() {
+    recordTick () {
       this.ts = this.recordStartOt.getRelativeTS()
     },
-    playbackTick() {
+    playbackTick () {
       let nextTs = this.playbackStartTs + Date.now() - this.playbackStartTime
       if (nextTs > this.maxTs) {
         nextTs = this.maxTs
@@ -308,11 +290,11 @@ export default {
       }
       this.ts = nextTs
     },
-    toggleCursorBlink() {
+    toggleCursorBlink () {
       const cmCursor = this.$el.querySelector('.CodeMirror-cursors')
       cmCursor.style.visibility = cmCursor.style.visibility === 'visible' ? 'hidden' : 'visible'
     },
-    togglePlayMode() {
+    togglePlayMode () {
       const toggleState = {
         [PlayMode.PLAYBACK]: PlayMode.PAUSE,
         [PlayMode.PAUSE]: PlayMode.PLAYBACK,
@@ -323,7 +305,7 @@ export default {
 
       _.defer(this.$refs.slider.layout)
     },
-    toggleRecordExercise() {
+    toggleRecordExercise () {
       const toggleState = {
         [PlayMode.RECORD]: PlayMode.RECORD_EXERCISE,
         [PlayMode.RECORD_EXERCISE]: PlayMode.RECORD

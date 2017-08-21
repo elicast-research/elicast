@@ -10,11 +10,12 @@
 
 <script>
 import _ from 'lodash'
+import Color from 'color'
 
-const WIDTH_PADDING = 20
+const WIDTH_PADDING = 10
 const SLIDE_HEIGHT = 4
 const THUMB_WIDTH = 4, THUMB_HEIGHT = 10
-const DISABLED_ALPHA = 0.25
+const DISABLED_ALPHA = 0.5
 
 let isMouseDown = false
 
@@ -23,6 +24,10 @@ export default {
     disabled: {
       type: Boolean,
       default: false
+    },
+    color: {
+      type: String,
+      default: 'black'
     }
   },
 
@@ -54,7 +59,7 @@ export default {
       if (this.val < min) {
         this.val = min
       } else {
-        this.$emit('change', this.val)
+        this.$emit('change', this.val, false)
         this.draw()
       }
     },
@@ -62,12 +67,12 @@ export default {
       if (this.val > max) {
         this.val = max
       } else {
-        this.$emit('change', this.val)
+        this.$emit('change', this.val, false)
         this.draw()
       }
     },
     val(val, prevVal) {
-      this.$emit('change', val)
+      this.$emit('change', val, isMouseDown)
       this.draw()
     },
     width() { this.drawDebounce() },
@@ -78,6 +83,8 @@ export default {
   mounted() {
     window.addEventListener('resize', this.handleWindowResize)
 
+    window.el = this.$refs.canvas
+
     this.width = this.$el.clientWidth
   },
 
@@ -87,8 +94,7 @@ export default {
 
   methods: {
     handleWindowResize(e) {
-      console.log(this.$el.clientWidth)
-      this.width = this.$el.clientWidth
+      this.layout()
     },
 
     handleMousedown(e) {
@@ -129,6 +135,10 @@ export default {
       return false
     },
 
+    layout() {
+      this.width = this.$el.offsetWidth
+    },
+
     slide(offset) {
       if (this.disabled) return false
 
@@ -156,15 +166,16 @@ export default {
 
       ctx.clearRect(0, 0, canvas.width, canvas.height)
 
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.2)'
+      let color = Color(this.color)
+      ctx.fillStyle = color.fade(0.8).string()
       ctx.fillRect(this.slideLeft, canvas.height / 2 - SLIDE_HEIGHT / 2, this.slideWidth, SLIDE_HEIGHT)
 
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.2)'
+      ctx.fillStyle = color.fade(0.8).string()
       ctx.fillRect(this.slideLeft, canvas.height / 2 - SLIDE_HEIGHT / 2, this.valToOffset(this.val) - this.slideLeft, SLIDE_HEIGHT)
 
       let offset = this.valToOffset(this.val)
 
-      ctx.fillStyle = 'rgba(0, 0, 0, 1)'
+      ctx.fillStyle = color.string()
       ctx.fillRect(offset - THUMB_WIDTH / 2, 0, THUMB_WIDTH, THUMB_HEIGHT)
     }
   }

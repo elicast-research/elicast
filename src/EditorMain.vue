@@ -1,6 +1,6 @@
 <template>
   <div class="container">
-    <h1>Elicast Editor</h1>
+    <h1>/* Elicast Editor */</h1>
     <ElicastEditor></ElicastEditor>
   </div>
 </template>
@@ -18,7 +18,8 @@ export default {
 <style lang="scss">
 
 h1 {
-  margin-top: 1.5rem;
+  margin: 1.5rem 0;
+  font-family: 'Avenir';
 }
 
 </style>

@@ -1,31 +1,41 @@
 <template>
   <div id="editor">
-    <codemirror ref="cm"
-                v-model="code"
-                :options="editorOptions"
-                @beforeChange="onEditorBeforeChange"
-                @cursorActivity="onEditorCursorActivity">
-    </codemirror>
+    <div class="editor-wrap">
+      <codemirror ref="cm"
+                  v-model="code"
+                  :options="editorOptions"
+                  @beforeChange="onEditorBeforeChange"
+                  @cursorActivity="onEditorCursorActivity">
+      </codemirror>
+
+      <button class="btn btn-sm btn-light"
+              v-show="isRecording"
+              @click="toggleRecordExercise">
+        <span v-show="isRecord" class="text-danger">EX_START</span>
+        <span v-show="isRecordExercise" class="text-danger">EX_STOP</span>
+      </button>
+    </div>
 
     <div class="controls">
-      <a @click="togglePlayMode">
+      <button class="btn btn-sm btn-light"
+              @click="togglePlayMode"
+              :disabled="isRecordExercise">
         <i v-show="isPlayback" class="fa fa-play" aria-hidden="true"></i>
         <i v-show="isPause" class="fa fa-pause" aria-hidden="true"></i>
         <i v-show="isStandby" class="fa fa-video-camera" aria-hidden="true"></i>
-        <i v-show="isRecord" class="fa fa-video-camera text-danger" aria-hidden="true"></i>
-      </a>
-      <Slider ref="slider" class="slider" @change="handleSliderChange" :disabled="isRecord" />
+        <i v-show="isRecording" class="fa fa-video-camera text-danger" aria-hidden="true"></i>
+      </button>
+
+      <Slider ref="slider"
+              class="slider"
+              @change="handleSliderChange"
+              :color="sliderColor"
+              :disabled="isRecording" />
+
       <div class="ts-display text-secondary">
         {{ tsDisplay }}
       </div>
     </div>
-
-    <button class="btn btn-primary btn-sm"
-            v-if="exerciseStartIndex < 0"
-            v-on:click="onExerciseStartClick">Start Exercise</button>
-    <button class="btn btn-danger btn-sm"
-            v-else
-            v-on:click="onExerciseStopClick">Stop Exercise</button>
   </div>
 </template>
 
@@ -36,11 +46,24 @@ import 'codemirror/addon/selection/mark-selection'
 import 'codemirror/mode/python/python'
 import Slider from '@/components/slider'
 
-const PlayMode = {
-  PLAYBACK: 'playback',
-  PAUSE: 'pause',
-  STANDBY: 'standby',
-  RECORD: 'record'
+class PlayMode {
+  static PLAYBACK = new PlayMode('playback')
+  static PAUSE = new PlayMode('pause')
+  static STANDBY = new PlayMode('standby')
+  static RECORD = new PlayMode('record')
+  static RECORD_EXERCISE = new PlayMode('record_exercise')
+
+  constructor(name) {
+    this.name = name
+  }
+
+  toString() {
+    return this.name
+  }
+
+  isRecording() {
+    return [PlayMode.RECORD, PlayMode.RECORD_EXERCISE].includes(this)
+  }
 }
 
 const EDITOR_OPTIONS = {
@@ -52,9 +75,11 @@ const EDITOR_OPTIONS = {
 }
 
 const CURSOR_BLINK_RATE = 530 // CodeMirror default cursorBlinkRate: 530ms
+const PLAYBACK_TICK = 1000 / 120
+const RECORD_TICK = 1000 / 10
 
 const INITIAL_CODE = `def hello(thing):
-print(f"hello, {thing}!")
+  print(f"hello, {thing}!")
 
 hello("world")`
 
@@ -67,9 +92,16 @@ export default {
         new ElicastSelection(1, 0, 0)
       ],
       ts: 0,
-      recordStartOt: undefined,
-      exerciseStartIndex: -1,
-      playMode: PlayMode.STANDBY
+      playMode: PlayMode.STANDBY,
+      maxTs: 0,
+      recordStartOt: null,
+      recordExerciseStartOt: null,
+      playbackStartTs: -1,
+      playbackStartTime: -1,
+
+      cursorBlinkTimer: -1,
+      recordTimer: -1,
+      playbackTimer: -1
     }
   },
 
@@ -79,7 +111,7 @@ export default {
     },
     editorOptions() {
       return Object.assign({
-        readOnly: this.playMode === PlayMode.RECORD ? false : 'nocursor'
+        readOnly: this.playMode.isRecording() ? false : 'nocursor'
       }, EDITOR_OPTIONS)
     },
     isPause() {
@@ -94,30 +126,42 @@ export default {
     isRecord() {
       return this.playMode === PlayMode.RECORD
     },
+    isRecordExercise() {
+      return this.playMode === PlayMode.RECORD_EXERCISE
+    },
+    isRecording() {
+      return this.playMode.isRecording()
+    },
     tsDisplay() {
       const hour = Math.floor(this.ts / 1000 / 60 / 60)
       const min = Math.floor((this.ts / 1000 / 60) % 60)
       const sec = Math.floor((this.ts / 1000) % 60)
       return [hour, [min, String(sec).padStart(2, '0')].join(':')]
         .filter(Boolean).join(':')
+    },
+    sliderColor() {
+      return this.playMode.isRecording() ? 'red' : 'black'
     }
   },
 
   watch: {
     ots(ots, prevOts) {
       const lastOt = ots[ots.length - 1]
-      this.$refs.slider.max = lastOt.ts
-      this.$refs.slider.val = lastOt.ts
       console.log(lastOt.command, lastOt.ts)
 
       this.ts = lastOt.ts
     },
 
     ts(ts, prevTs) {
+      if (ts > this.maxTs) {
+        this.maxTs = ts
+        this.$refs.slider.max = ts
+      }
       this.$refs.slider.val = ts
 
-      if (this.playMode === PlayMode.RECORD) return
+      if (this.playMode.isRecording()) return
 
+      // forward / rewind the document
       let prevOtIdx = this.ots.findIndex(ot => prevTs < ot.ts)
       prevOtIdx = (prevOtIdx < 0 ? this.ots.length : prevOtIdx) - 1
       let newOtIdx = this.ots.findIndex(ot => ts < ot.ts)
@@ -132,19 +176,59 @@ export default {
 
       if (ts === this.$refs.slider.max) {
         this.playMode = PlayMode.STANDBY
-      } else {
-        this.playMode = PlayMode.PAUSE
       }
     },
 
     playMode(playMode, prevPlayMode) {
-      if (playMode === PlayMode.RECORD) {
+      if (!prevPlayMode.isRecording() && playMode === PlayMode.RECORD) {
+        // start recording
         const lastTs = this.ots.length ? this.ots[this.ots.length - 1].ts : 0
         this.recordStartOt = new ElicastNop(lastTs)
         this.ots.push(this.recordStartOt)
-      } else if (prevPlayMode === PlayMode.RECORD) {
+
+        if (this.recordTimer !== -1) throw new Error('recordTimer is not cleared')
+        this.recordTimer = setInterval(this.recordTick, RECORD_TICK)
+
+      } else if (prevPlayMode === PlayMode.RECORD && !playMode.isRecording()) {
+        // end recording
         const ts = this.recordStartOt.getRelativeTS()
         this.ots.push(new ElicastNop(ts))
+        this.recordStartOt = null
+
+        clearInterval(this.recordTimer)
+        this.recordTimer = -1
+
+      } else if (prevPlayMode === PlayMode.RECORD && playMode === PlayMode.RECORD_EXERCISE) {
+        // start recording exercise
+        const ts = this.recordStartOt.getRelativeTS()
+        this.recordExerciseStartOt = new ElicastNop(ts)
+        this.ots.push(this.recordExerciseStartOt)
+
+      } else if (prevPlayMode === PlayMode.RECORD_EXERCISE && playMode === PlayMode.RECORD) {
+        const ts = this.recordStartOt.getRelativeTS()
+        const newOt = ElicastOT.makeOTFromExercise(this.ots, this.recordExerciseStartOt, ts)
+        this.ots.push(newOt)
+        this.recordExerciseStartOt = null
+
+      } else if (playMode === PlayMode.PLAYBACK) {
+        // start playback
+        if (this.playbackTimer !== -1) throw new Error("playbackTimer is not cleared")
+
+        this.playbackStartTs = this.ts
+        this.playbackStartTime = Date.now()
+
+        const tick = function() {
+          this.playbackTick()
+          this.playbackTimer = setTimeout(tick, PLAYBACK_TICK)
+        }.bind(this)
+
+        this.playbackTimer = setTimeout(tick, PLAYBACK_TICK)
+
+      } else if (prevPlayMode === PlayMode.PLAYBACK) {
+        // pause playback
+        clearTimeout(this.playbackTimer)
+        this.playbackTimer = -1
+
       }
     }
   },
@@ -159,7 +243,7 @@ export default {
 
   methods: {
     onEditorBeforeChange(cm, changeObj) {
-      if (this.playMode !== PlayMode.RECORD) return
+      if (!this.playMode.isRecording()) return
 
       if (!ElicastOT.isChangeAllowed(this.ots, this.exerciseStartIndex, cm, changeObj)) {
         changeObj.cancel();
@@ -170,21 +254,26 @@ export default {
       this.ots.push(newOt)
     },
     onEditorCursorActivity(cm) {
-      // console.log('onEditorCursorActivity', cm.listSelections()[0].anchor, cm.listSelections()[0].head)
-      if (this.playMode !== PlayMode.RECORD) return
+      if (!this.playMode.isRecording()) return
 
       const ts = this.recordStartOt.getRelativeTS()
       const newOt = ElicastOT.makeOTFromCMSelection(cm, ts)
       this.ots.push(newOt)
     },
-    onExerciseStartClick(event) {
-      this.exerciseStartIndex = this.ots.length;
-    },
-    onExerciseStopClick(event) {
-      this.exerciseStartIndex = -1;
-    },
-    handleSliderChange(val) {
+    handleSliderChange(val, isMouseDown) {
+      if (isMouseDown) this.playMode = PlayMode.PAUSE
       this.ts = val
+    },
+    recordTick() {
+      this.ts = this.recordStartOt.getRelativeTS()
+    },
+    playbackTick() {
+      let nextTs = this.playbackStartTs + Date.now() - this.playbackStartTime
+      if (nextTs > this.maxTs) {
+        nextTs = this.maxTs
+        this.playMode = PlayMode.PAUSE
+      }
+      this.ts = nextTs
     },
     toggleCursorBlink() {
       const cmCursor = this.$el.querySelector('.CodeMirror-cursors')
@@ -198,6 +287,17 @@ export default {
         [PlayMode.RECORD]: PlayMode.STANDBY
       }
       this.playMode = toggleState[this.playMode]
+
+      _.defer(this.$refs.slider.layout)
+    },
+    toggleRecordExercise() {
+      const toggleState = {
+        [PlayMode.RECORD]: PlayMode.RECORD_EXERCISE,
+        [PlayMode.RECORD_EXERCISE]: PlayMode.RECORD
+      }
+      this.playMode = toggleState[this.playMode]
+
+      _.defer(this.$refs.slider.layout)
     }
   },
 
@@ -209,8 +309,17 @@ export default {
 </script>
 
 <style lang="scss">
-.CodeMirror {
+.editor-wrap {
+  position: relative;
   border: 1px solid #eee;
+
+  button {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    z-index: 100;
+    cursor: pointer;
+  }
 }
 
 .controls {
@@ -218,8 +327,16 @@ export default {
   align-items: center;
   padding: 0.5rem 0;
 
-  a {
-    width: 1.5rem;
+  & > * {
+    margin: 0 0.25rem;
+
+    &:first-child, &:last-child {
+      margin: 0;
+    }
+  }
+
+  button {
+    width: 2.5em;
     text-align: center;
     cursor: pointer;
   }

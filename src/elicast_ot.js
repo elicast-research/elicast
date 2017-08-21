@@ -1,5 +1,7 @@
 import _ from 'lodash'
 
+import OTArea from './ot_area.js'
+
 /*  OT for Elicast
  *
  *  Structure := { ts: 123456789, command: "selection", **commandArgs... }
@@ -26,7 +28,7 @@ export default class ElicastOT {
 }
 
 export class ElicastNop extends ElicastOT {
-  constructor(ts, time = new Date().getTime()) {
+  constructor(ts, time = Date.now()) {
     super(ts, 'nop')
 
     time = time
@@ -35,7 +37,7 @@ export class ElicastNop extends ElicastOT {
     this.time = time
   }
 
-  getRelativeTS(time = new Date().getTime()) {
+  getRelativeTS(time = Date.now()) {
     return this.ts + time - this.time
   }
 }
@@ -148,59 +150,35 @@ function lineChToPos(content, lineCh) {
 
 
 function isAreaConflict(area, fromPos, toPos) {
-  return (fromPos <= area.fromPos && area.toPos <= toPos) || // case: [ fromPos { area } toPos ]
-    (fromPos <= area.fromPos && area.fromPos < toPos) || // case: [ fromPos { area toPos ] area }
-    (fromPos < area.toPos && area.toPos <= toPos) || // case: { area [ fromPos area } toPos ]
-    (area.fromPos <= fromPos && toPos <= area.toPos); // case: { area [ fromPos toPos ] area }
-}
-
-
-function getExerciseAreas(ots) {
-  // TODO: use binary search in areas for efficiency
-  const areas = [];
-  for (const ot of ots) {
-    if (ot.command === "text") {
-      const deltaPos = ot.insertedText.length - ot.removedText.length;
-
-      for (const area of areas) {
-        if (isAreaConflict(area, ot.fromPos, ot.toPos)) {
-          console.error("OT conflicts to exercise area");
-          return;
-        }
-
-        if (ot.toPos <= area.fromPos) {
-          area.fromPos += deltaPos;
-          area.toPos += deltaPos;
-        }
-      }
-    } else if (ot.command === "exPlaceholder") {
-      // areas.push({
-      //   type: "exercise",
-      //   fromPos: ot.fromPos,
-      //   toPos: ot.toPos
-      // });
-    }
-  }
-
-  areas.sort((areaA, areaB) => areaA.fromPos - areaB.fromPos);
-
-  return areas;
+  return (fromPos <= area.fromPos && area.fromPos < toPos) ||
+    (area.fromPos < fromPos && fromPos < area.toPos);
 }
 
 
 function getAreas(ots) {
-  let docLength = 0;
+  const areas = [];
   for (const ot of ots) {
     if (ot.command === "text") {
-      docLength += ot.insertedText.length - ot.removedText.length;
-    } else if (ot.command === "exPlaceholder") {
-      for (const solutionOt of ot.solutionOts) {
-        if (solutionOt.command === "text") {
-          docLength += solutionOt.insertedText.length - solutionOt.removedText.length;
-        }
+      if (0 < ot.removedText.length) {
+        OTArea.remove(areas, "text", ot.fromPos, ot.fromPos + ot.removedText.length);
       }
+      if (0 < ot.insertedText.length) {
+        OTArea.insert(areas, "text", ot.fromPos, ot.fromPos + ot.insertedText.length, true);
+      }
+
+    } else if (ot.command === "exPlaceholder") {
+      const exerciseAreas = getAreas(ot.solutionOts);
+      if (exerciseAreas.length !== 1 || exerciseAreas[0].type !== "text") {
+        console.error("Solution OT must be a single text area");
+        return;
+      }
+
+      const exerciseArea = exerciseAreas[0];
+      OTArea.insert(areas, "exercise", exerciseArea.fromPos, exerciseArea.toPos, false);
     }
   }
+
+  return areas;
 }
 
 
@@ -295,6 +273,13 @@ ElicastOT.makeOTFromCMSelection = function(cm, ts) {
 };
 
 
+ElicastOT.makeOTFromExercise = function(ots, exerciseStartIndex, ts) {
+ const solutionOts = ots.splice(exerciseStartIndex)
+
+ return new ElicastExPlaceHolder(ts, 1, solutionOts)
+};
+
+
 /*  This function convert CodeMirror's selection object
  *  (from `cm.beforeChange` event) to Elicast "text" OT.
  *
@@ -327,31 +312,28 @@ ElicastOT.isChangeAllowed = function(ots, exerciseStartIndex, cm, changeObj) {
 
   if (exerciseStartIndex < 0) {
     // Prevent to edit inside of existing exercise areas
-    const exerciseAreas = getExerciseAreas(ots);
-    for (const area of exerciseAreas) {
-      if (isAreaConflict(area, fromPos, toPos)) {
+    const areas = getAreas(ots);
+    for (const area of areas) {
+      if (area.type === "exercise" && isAreaConflict(area, fromPos, toPos)) {
+        console.log(fromPos, toPos, area);
         return false;
       }
     }
 
     return true;
-
   } else {
     // Only allow current exercise area
     const exOts = ots.slice(exerciseStartIndex);
+    const areas = getAreas(exOts);
 
-    // // Allow inserting text at anyware if there is no text OT yet
-    // let isExStarted = false;
-    // for (const ot of exOts) {
-    //   if (ot.command === "text") {
-    //     isExStarted = true;
-    //     break;
-    //   }
-    // }
-    //
-    // if (!isExStarted) {
-    //   return true;
-    // }
+    if (areas.length === 0) {
+      return true;
+    } else if (areas.length > 1 || areas[0].type !== "text") {
+      console.error("Exercise area is inconsistent");
+      return false;
+    }
 
+    const exArea = areas[0];
+    return exArea.fromPos <= fromPos && toPos <= exArea.toPos;
   }
 }

@@ -98,8 +98,9 @@ export default {
       this.exerciseStartIndex = this.ots.length;
     },
     onExerciseStopClick(event) {
+      const newOt = ElicastOT.makeOTFromExercise(this.ots, this.exerciseStartIndex);
+      this.ots.push(newOt);
       this.exerciseStartIndex = -1;
-      console.log('OT', ElicastOT.makeOTFromCMSelection(cm));
     },
     handleSliderChange(val) {
       this.ts = val

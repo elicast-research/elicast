@@ -44,6 +44,7 @@ import ElicastOT, { ElicastNop, ElicastText, ElicastSelection } from '@/elicast_
 import { codemirror, CodeMirror } from 'vue-codemirror'
 import 'codemirror/addon/selection/mark-selection'
 import 'codemirror/mode/python/python'
+import { Howl } from 'howler'
 import Slider from '@/components/slider'
 
 class PlayMode {
@@ -83,6 +84,7 @@ const INITIAL_CODE = `def hello(thing):
 
 hello("world")`
 
+
 export default {
   data () {
     return {
@@ -96,6 +98,8 @@ export default {
       maxTs: 0,
       recordStartOt: null,
       recordExerciseStartOt: null,
+      recordAudioBlob: null,
+      recordAudioChunks: null,
       playbackStartTs: -1,
       playbackStartTime: -1,
 
@@ -182,21 +186,41 @@ export default {
     playMode(playMode, prevPlayMode) {
       if (!prevPlayMode.isRecording() && playMode === PlayMode.RECORD) {
         // start recording
-        const lastTs = this.ots.length ? this.ots[this.ots.length - 1].ts : 0
-        this.recordStartOt = new ElicastNop(lastTs)
-        this.ots.push(this.recordStartOt)
+        function handleGetUserMedia(stream) {
+          this.recordAudioChunks = []
+          this.recordAudioRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' })
+          this.recordAudioRecorder.ondataavailable = this.handleAudioDataAvailable
+          this.recordAudioRecorder.start()
 
-        if (this.recordTimer !== -1) throw new Error('recordTimer is not cleared')
-        this.recordTimer = setInterval(this.recordTick, RECORD_TICK)
+          const lastTs = this.ots.length ? this.ots[this.ots.length - 1].ts : 0
+          this.recordStartOt = new ElicastNop(lastTs)
+          this.ots.push(this.recordStartOt)
+
+          if (this.recordTimer !== -1) throw new Error('recordTimer is not cleared')
+          this.recordTimer = setInterval(this.recordTick, RECORD_TICK)
+        }
+
+        navigator.mediaDevices.getUserMedia({ audio: true })
+          .then(handleGetUserMedia.bind(this))
 
       } else if (prevPlayMode === PlayMode.RECORD && !playMode.isRecording()) {
         // end recording
-        const ts = this.recordStartOt.getRelativeTS()
-        this.ots.push(new ElicastNop(ts))
-        this.recordStartOt = null
+        this.recordAudioRecorder.onstop = function(event) {
+          let blob = new Blob(this.recordAudioChunks, { type : 'audio/webm' })
 
-        clearInterval(this.recordTimer)
-        this.recordTimer = -1
+          if (!this.recordAudioBlob) this.recordAudioBlob = blob
+          else this.recordAudioBlob = new Blob([this.recordAudioBlob, blob], { type: 'audio/webm' })
+
+          const ts = this.recordStartOt.getRelativeTS()
+          this.ots.push(new ElicastNop(ts))
+          this.recordStartOt = null
+
+          clearInterval(this.recordTimer)
+          this.recordTimer = -1
+          this.recordAudioChunks = null
+        }.bind(this)
+
+        this.recordAudioRecorder.stop()
 
       } else if (prevPlayMode === PlayMode.RECORD && playMode === PlayMode.RECORD_EXERCISE) {
         // start recording exercise
@@ -214,15 +238,21 @@ export default {
         // start playback
         if (this.playbackTimer !== -1) throw new Error("playbackTimer is not cleared")
 
-        this.playbackStartTs = this.ts
-        this.playbackStartTime = Date.now()
+        const blobUrl = URL.createObjectURL(this.recordAudioBlob)
+        const sound = new Howl({ src: [blobUrl], format: ['webm'] })
+        sound.on('load', function() {
+          sound.seek(this.ts / 1000)
+          sound.play()
 
-        const tick = function() {
-          this.playbackTick()
+          this.playbackStartTs = this.ts
+          this.playbackStartTime = Date.now()
+
+          const tick = function() {
+            this.playbackTick()
+            this.playbackTimer = setTimeout(tick, PLAYBACK_TICK)
+          }.bind(this)
           this.playbackTimer = setTimeout(tick, PLAYBACK_TICK)
-        }.bind(this)
-
-        this.playbackTimer = setTimeout(tick, PLAYBACK_TICK)
+        }.bind(this))
 
       } else if (prevPlayMode === PlayMode.PLAYBACK) {
         // pause playback
@@ -263,6 +293,9 @@ export default {
     handleSliderChange(val, isMouseDown) {
       if (isMouseDown) this.playMode = PlayMode.PAUSE
       this.ts = val
+    },
+    handleAudioDataAvailable(event) {
+      this.recordAudioChunks.push(event.data)
     },
     recordTick() {
       this.ts = this.recordStartOt.getRelativeTS()

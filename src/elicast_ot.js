@@ -47,7 +47,6 @@ export class ElicastSelection extends ElicastOT {
     if (!_.isInteger(fromPos)) throw new Error('Invalid fromPos')
     if (!_.isInteger(toPos)) throw new Error('Invalid toPos')
     if (!(fromPos >= 0 && toPos >= 0)) throw new Error('fromPos and toPos must be non-negative')
-    if (!(fromPos <= toPos)) throw new Error('toPos must be greater than fromPos')
 
     this.fromPos = fromPos
     this.toPos = toPos
@@ -253,7 +252,10 @@ ElicastOT.applyOtToCM = function(cm, ot) {
 ElicastOT.revertOtToCM = function(cm, ot) {
   const cmContent = cm.doc.getValue()
 
-  if (ot.command === "text") {
+  if (ot.command === "selection") {
+    ElicastOT.applyOtToCM(cm, ot)
+
+  } else if (ot.command === "text") {
     if (cmContent.substring(ot.fromPos, ot.fromPos + ot.insertedText.length) !== ot.insertedText) {
       console.error('The removed text is not matched')
       return

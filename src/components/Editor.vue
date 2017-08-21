@@ -30,7 +30,7 @@
 </template>
 
 <script>
-import ElicastOT, { ElicastNop, ElicastText } from '@/elicast_ot'
+import ElicastOT, { ElicastNop, ElicastText, ElicastSelection } from '@/elicast_ot'
 import { codemirror, CodeMirror } from 'vue-codemirror'
 import 'codemirror/addon/selection/mark-selection'
 import 'codemirror/mode/python/python'
@@ -47,8 +47,11 @@ const EDITOR_OPTIONS = {
   mode: 'python',
   lineNumbers: true,
   cursorBlinkRate: 0, // disable default blinker which is not working in no-focus state
+  showCursorWhenSelecting: true,
   autofocus: true,
 }
+
+const CURSOR_BLINK_RATE = 530 // CodeMirror default cursorBlinkRate: 530ms
 
 const INITIAL_CODE = `def hello(thing):
 print(f"hello, {thing}!")
@@ -59,7 +62,10 @@ export default {
   data () {
     return {
       code: INITIAL_CODE,
-      ots: [ new ElicastText(0, 0, 0, INITIAL_CODE, '') ],
+      ots: [
+        new ElicastText(0, 0, 0, INITIAL_CODE, ''),
+        new ElicastSelection(1, 0, 0)
+      ],
       ts: 0,
       recordStartOt: undefined,
       exerciseStartIndex: -1,
@@ -110,28 +116,24 @@ export default {
     ts(ts, prevTs) {
       this.$refs.slider.val = ts
 
-      switch (this.playMode) {
-        case PlayMode.PLAYBACK:
-        case PlayMode.PAUSE:
-        case PlayMode.STANDBY:
-          let prevOtIdx = this.ots.findIndex(ot => prevTs < ot.ts)
-          prevOtIdx = (prevOtIdx < 0 ? this.ots.length : prevOtIdx) - 1
-          let newOtIdx = this.ots.findIndex(ot => ts < ot.ts)
-          newOtIdx = (newOtIdx < 0 ? this.ots.length : newOtIdx) - 1
+      if (this.playMode === PlayMode.RECORD) return
 
-          for (let i = prevOtIdx + 1; i <= newOtIdx && i < this.ots.length; i++) {
-            ElicastOT.applyOtToCM(this.cm, this.ots[i])
-          }
-          for (let i = prevOtIdx; i > newOtIdx && i >= 0; i--) {
-            ElicastOT.revertOtToCM(this.cm, this.ots[i])
-          }
+      let prevOtIdx = this.ots.findIndex(ot => prevTs < ot.ts)
+      prevOtIdx = (prevOtIdx < 0 ? this.ots.length : prevOtIdx) - 1
+      let newOtIdx = this.ots.findIndex(ot => ts < ot.ts)
+      newOtIdx = (newOtIdx < 0 ? this.ots.length : newOtIdx) - 1
 
-          if (ts === this.$refs.slider.max) {
-            this.playMode = PlayMode.STANDBY
-          } else {
-            this.playMode = PlayMode.PAUSE
-          }
-          break
+      for (let i = prevOtIdx + 1; i <= newOtIdx && i < this.ots.length; i++) {
+        ElicastOT.applyOtToCM(this.cm, this.ots[i])
+      }
+      for (let i = prevOtIdx; i > newOtIdx && i >= 0; i--) {
+        ElicastOT.revertOtToCM(this.cm, this.ots[i])
+      }
+
+      if (ts === this.$refs.slider.max) {
+        this.playMode = PlayMode.STANDBY
+      } else {
+        this.playMode = PlayMode.PAUSE
       }
     },
 
@@ -147,6 +149,14 @@ export default {
     }
   },
 
+  mounted(t) {
+    this.cursorBlinkTimer = setInterval(this.toggleCursorBlink, CURSOR_BLINK_RATE)
+  },
+
+  beforeDestroy() {
+    clearInterval(this.cursorBlinkTimer)
+  },
+
   methods: {
     onEditorBeforeChange(cm, changeObj) {
       if (this.playMode !== PlayMode.RECORD) return
@@ -160,6 +170,7 @@ export default {
       this.ots.push(newOt)
     },
     onEditorCursorActivity(cm) {
+      // console.log('onEditorCursorActivity', cm.listSelections()[0].anchor, cm.listSelections()[0].head)
       if (this.playMode !== PlayMode.RECORD) return
 
       const ts = this.recordStartOt.getRelativeTS()
@@ -174,6 +185,10 @@ export default {
     },
     handleSliderChange(val) {
       this.ts = val
+    },
+    toggleCursorBlink() {
+      const cmCursor = this.$el.querySelector('.CodeMirror-cursors')
+      cmCursor.style.visibility = cmCursor.style.visibility === 'visible' ? 'hidden' : 'visible'
     },
     togglePlayMode() {
       const toggleState = {

@@ -4,8 +4,8 @@
       <codemirror ref="cm"
                   v-model="code"
                   :options="editorOptions"
-                  @beforeChange="onEditorBeforeChange"
-                  @cursorActivity="onEditorCursorActivity">
+                  @beforeChange="handleEditorBeforeChange"
+                  @cursorActivity="handleEditorCursorActivity">
       </codemirror>
 
       <button class="btn btn-sm btn-light"
@@ -169,17 +169,17 @@ export default {
     playMode (playMode, prevPlayMode) {
       if (!prevPlayMode.isRecording() && playMode === PlayMode.RECORD) {
         // start recording
-        this.recordSound.record().then(function () {
+        this.recordSound.record().then(() => {
           const lastTs = this.ots.length ? this.ots[this.ots.length - 1].ts : 0
           this.recordStartOt = new ElicastNop(lastTs)
           this.ots.push(this.recordStartOt)
 
           if (this.recordTimer !== -1) throw new Error('recordTimer is not cleared')
           this.recordTimer = setInterval(this.recordTick, RECORD_TICK)
-        }.bind(this))
+        })
       } else if (prevPlayMode === PlayMode.RECORD && !playMode.isRecording()) {
         // end recording
-        this.recordSound.stopRecording().then(function () {
+        this.recordSound.stopRecording().then(() => {
           const ts = this.recordStartOt.getRelativeTS()
           this.ots.push(new ElicastNop(ts))
           this.recordStartOt = null
@@ -187,7 +187,7 @@ export default {
           clearInterval(this.recordTimer)
           this.recordTimer = -1
           this.recordAudioChunks = null
-        }.bind(this))
+        })
       } else if (prevPlayMode === PlayMode.RECORD && playMode === PlayMode.RECORD_EXERCISE) {
         // start recording exercise
         const ts = this.recordStartOt.getRelativeTS()
@@ -202,7 +202,7 @@ export default {
         // start playback
         if (this.playbackTimer !== -1) throw new Error('playbackTimer is not cleared')
 
-        this.recordSound.load().then(function (sound) {
+        this.recordSound.load().then((sound) => {
           sound.seek(this.ts / 1000)
           sound.play()
 
@@ -210,12 +210,12 @@ export default {
           this.playbackStartTime = Date.now()
           this.playbackSound = sound
 
-          const tick = function () {
+          const tick = () => {
             this.playbackTick()
             this.playbackTimer = setTimeout(tick, PLAYBACK_TICK)
-          }.bind(this)
+          }
           this.playbackTimer = setTimeout(tick, PLAYBACK_TICK)
-        }.bind(this))
+        })
 
         console.log(JSON.stringify(this.ots))
       } else if (prevPlayMode === PlayMode.PLAYBACK) {
@@ -237,7 +237,7 @@ export default {
   },
 
   methods: {
-    onEditorBeforeChange (cm, changeObj) {
+    handleEditorBeforeChange (cm, changeObj) {
       if (!this.playMode.isRecording()) return
 
       if (!ElicastOT.isChangeAllowed(this.ots, this.recordExerciseStartOt, cm, changeObj)) {
@@ -248,7 +248,7 @@ export default {
       const newOt = ElicastOT.makeOTFromCMChange(cm, changeObj, ts)
       this.ots.push(newOt)
     },
-    onEditorCursorActivity (cm) {
+    handleEditorCursorActivity (cm) {
       if (!this.playMode.isRecording()) return
 
       const ts = this.recordStartOt.getRelativeTS()

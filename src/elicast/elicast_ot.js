@@ -188,8 +188,7 @@ ElicastOT.applyOtToCM = function (cm, ot) {
     return
   } else if (ot.command === 'selection') {
     if (cmContent.length < ot.fromPos || cmContent.length < ot.toPos) {
-      console.error('The selection is out of range')
-      return
+      throw new Error('The selection is out of range')
     }
 
     const fromLineCh = posToLineCh(cmContent, ot.fromPos)
@@ -197,19 +196,18 @@ ElicastOT.applyOtToCM = function (cm, ot) {
     cm.doc.setSelection(fromLineCh, toLineCh)
   } else if (ot.command === 'text') {
     if (cmContent.substring(ot.fromPos, ot.toPos) !== ot.removedText) {
-      console.error('The removed text is not matched')
-      return
+      throw new Error('The removed text is not matched')
     }
 
     const fromLineCh = posToLineCh(cmContent, ot.fromPos)
     const toLineCh = posToLineCh(cmContent, ot.toPos)
     cm.doc.replaceRange(ot.insertedText, fromLineCh, toLineCh)
   } else if (ot.command === 'exPlaceholder') {
-    console.error('Not implemented')
+    throw new Error('Not implemented')
   } else if (ot.command === 'exShow') {
-    console.error('Not implemented')
+    throw new Error('Not implemented')
   } else {
-    console.error('Invalid OT command', ot.command)
+    throw new Error('Invalid OT command', ot.command)
   }
 }
 
@@ -220,8 +218,7 @@ ElicastOT.revertOtToCM = function (cm, ot) {
     ElicastOT.applyOtToCM(cm, ot)
   } else if (ot.command === 'text') {
     if (cmContent.substring(ot.fromPos, ot.fromPos + ot.insertedText.length) !== ot.insertedText) {
-      console.error('The removed text is not matched')
-      return
+      throw new Error('The removed text is not matched')
     }
 
     const fromLineCh = posToLineCh(cmContent, ot.fromPos)
@@ -292,18 +289,15 @@ ElicastOT.isChangeAllowed = function (ots, exerciseStartOt, cm, changeObj) {
   const fromPos = lineChToPos(cmContent, changeObj.from)
   const toPos = lineChToPos(cmContent, changeObj.to)
   const exerciseStartIndex = ots.indexOf(exerciseStartOt)
-  console.log(exerciseStartOt, exerciseStartIndex)
 
   if (exerciseStartIndex < 0) {
     // Prevent to edit inside of existing exercise areas
     const areas = getAreas(ots)
     for (const area of areas) {
       if (area.type === 'exercise' && isAreaConflict(area, fromPos, toPos)) {
-        console.log(fromPos, toPos, area)
         return false
       }
     }
-
     return true
   } else {
     // Only allow current exercise area

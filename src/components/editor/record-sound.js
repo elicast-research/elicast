@@ -26,7 +26,6 @@ export default class RecordSound {
       this.mediaRecorder.addEventListener('stop', event => callback(null, event)))
 
     this.mediaRecorder.stop()
-
     await stopPromise
 
     const newBlob = new Blob(this.chunks)
@@ -39,9 +38,6 @@ export default class RecordSound {
     const sound = new Howl({ src: [blobUrl], format: ['webm'] })
 
     await Promise.fromCallback(callback => sound.once('load', callback))
-
-    console.log(JSON.stringify(blobUrl))
-
     return sound
   }
 

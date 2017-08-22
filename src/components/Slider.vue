@@ -18,8 +18,6 @@ const THUMB_WIDTH = 4
 const THUMB_HEIGHT = 10
 const DISABLED_ALPHA = 0.5
 
-let isMouseDown = false
-
 export default {
   props: {
     disabled: {
@@ -73,7 +71,7 @@ export default {
       }
     },
     val (val, prevVal) {
-      this.$emit('change', val, isMouseDown)
+      this.$emit('change', val, this.isMouseDown)
       this.draw()
     },
     width () { this.drawDebounce() },
@@ -99,10 +97,12 @@ export default {
     },
 
     handleMousedown (e) {
+      if (this.disabled) return false
+
       if (e.which === 1 || e.buttons === 1) {
         e.preventDefault()
 
-        isMouseDown = true
+        this.isMouseDown = true
 
         this.slide(e.offsetX)
 
@@ -115,7 +115,7 @@ export default {
     },
 
     handleDocumentMousemove (e) {
-      if (isMouseDown) {
+      if (this.isMouseDown) {
         e.preventDefault()
 
         let offsetX = e.pageX - this.$el.offsetLeft
@@ -126,12 +126,14 @@ export default {
     },
 
     handleDocumentMouseup (e) {
-      isMouseDown = false
+      if (this.isMouseDown) {
+        this.isMouseDown = false
 
-      document.removeEventListener('mousemove', this.handleDocumentMousemove)
-      document.removeEventListener('mouseup', this.handleDocumentMouseup)
+        document.removeEventListener('mousemove', this.handleDocumentMousemove)
+        document.removeEventListener('mouseup', this.handleDocumentMouseup)
 
-      this.$el.focus()
+        this.$el.focus()
+      }
 
       return false
     },

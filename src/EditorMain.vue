@@ -6,7 +6,7 @@
 </template>
 
 <script>
-import ElicastEditor from '@/components/Editor'
+import ElicastEditor from '@/components/editor'
 
 export default {
   components: {

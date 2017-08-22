@@ -163,8 +163,7 @@ function getAreas (ots) {
     } else if (ot.command === 'exPlaceholder') {
       const exerciseAreas = getAreas(ot.solutionOts)
       if (exerciseAreas.length !== 1 || exerciseAreas[0].type !== 'text') {
-        console.error('Solution OT must be a single text area')
-        return
+        throw new Error('Solution OT must be a single text area')
       }
 
       const exerciseArea = exerciseAreas[0]
@@ -257,7 +256,8 @@ ElicastOT.makeOTFromCMSelection = function (cm, ts) {
   return new ElicastSelection(ts, fromPos, toPos)
 }
 
-ElicastOT.makeOTFromExercise = function (ots, exerciseStartIndex, ts) {
+ElicastOT.makeOTFromExercise = function (ots, exerciseStartOt, ts) {
+  const exerciseStartIndex = ots.indexOf(exerciseStartOt)
   const solutionOts = ots.splice(exerciseStartIndex)
 
   return new ElicastExPlaceHolder(ts, 1, solutionOts)
@@ -287,10 +287,12 @@ ElicastOT.makeOTFromCMChange = function (cm, changeObj, ts) {
   return new ElicastText(ts, fromPos, toPos, changeObj.text.join('\n'), cmContent.substring(fromPos, toPos))
 }
 
-ElicastOT.isChangeAllowed = function (ots, exerciseStartIndex, cm, changeObj) {
+ElicastOT.isChangeAllowed = function (ots, exerciseStartOt, cm, changeObj) {
   const cmContent = cm.doc.getValue()
   const fromPos = lineChToPos(cmContent, changeObj.from)
   const toPos = lineChToPos(cmContent, changeObj.to)
+  const exerciseStartIndex = ots.indexOf(exerciseStartOt)
+  console.log(exerciseStartOt, exerciseStartIndex)
 
   if (exerciseStartIndex < 0) {
     // Prevent to edit inside of existing exercise areas
@@ -311,8 +313,7 @@ ElicastOT.isChangeAllowed = function (ots, exerciseStartIndex, cm, changeObj) {
     if (areas.length === 0) {
       return true
     } else if (areas.length > 1 || areas[0].type !== 'text') {
-      console.error('Exercise area is inconsistent')
-      return false
+      throw new Error('Exercise area is inconsistent')
     }
 
     const exArea = areas[0]

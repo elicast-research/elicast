@@ -8,7 +8,6 @@ function markExerciseOTs (exerciseSession) {
   for (let i = exerciseStartIndex + 1; i < exerciseSession.ots.length; i++) {
     if (exerciseSession.ots[i] instanceof ElicastExercise) break
     exerciseSession.ots[i]._exId = exerciseSession.exId
-    console.log('marked', exerciseSession.ots[i])
   }
 }
 

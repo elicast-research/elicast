@@ -108,8 +108,6 @@ export default {
 
         document.addEventListener('mousemove', this.handleDocumentMousemove)
         document.addEventListener('mouseup', this.handleDocumentMouseup)
-
-        this.$el.focus()
       }
       return false
     },
@@ -131,8 +129,6 @@ export default {
 
         document.removeEventListener('mousemove', this.handleDocumentMousemove)
         document.removeEventListener('mouseup', this.handleDocumentMouseup)
-
-        this.$el.focus()
       }
 
       return false

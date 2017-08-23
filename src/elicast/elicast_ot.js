@@ -243,7 +243,7 @@ ElicastOT.revertOtToCM = function (cm, ot) {
 
 ElicastOT.redrawExerciseAreas = function (cm, ots) {
   cm.doc.getAllMarks()
-    .filter(marker => marker.className === 'exercise')
+    .filter(marker => marker.className === 'exercise-block')
     .forEach(marker => marker.clear())
 
   const cmContent = cm.doc.getValue()
@@ -253,7 +253,7 @@ ElicastOT.redrawExerciseAreas = function (cm, ots) {
     .forEach(area => {
       const fromLineCh = posToLineCh(cmContent, area.fromPos)
       const toLineCh = posToLineCh(cmContent, area.toPos)
-      cm.doc.markText(fromLineCh, toLineCh, { className: 'exercise' })
+      cm.doc.markText(fromLineCh, toLineCh, { className: 'exercise-block' })
     })
 }
 

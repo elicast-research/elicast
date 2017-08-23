@@ -9,7 +9,7 @@
       </codemirror>
 
       <button class="btn btn-sm btn-light"
-              v-show="playMode.isRecording()"
+              v-show="playMode.isRecording() && playModeReady"
               @click="toggleRecordExercise">
         <span v-show="playMode === PlayMode.RECORD" class="text-danger">EX_START</span>
         <span v-show="playMode === PlayMode.RECORD_EXERCISE" class="text-danger">EX_STOP</span>
@@ -19,7 +19,7 @@
     <div class="controls">
       <button class="btn btn-sm btn-light"
               @click="togglePlayMode"
-              :disabled="playMode === PlayMode.RECORD_EXERCISE">
+              :disabled="playMode === PlayMode.RECORD_EXERCISE || !playModeReady">
         <i v-show="playMode === PlayMode.PAUSE" class="fa fa-play" aria-hidden="true"></i>
         <i v-show="playMode === PlayMode.PLAYBACK" class="fa fa-pause" aria-hidden="true"></i>
         <i v-show="playMode === PlayMode.STANDBY" class="fa fa-video-camera" aria-hidden="true"></i>
@@ -98,6 +98,7 @@ export default {
       ],
       ts: 0,
       playMode: PlayMode.STANDBY,
+      playModeReady: true,
       maxTs: 0,
       recordStartOt: null,
       recordExerciseSession: null,
@@ -181,29 +182,29 @@ export default {
       }
     },
 
-    playMode (playMode, prevPlayMode) {
+    async playMode (playMode, prevPlayMode) {
       if (!prevPlayMode.isRecording() && playMode === PlayMode.RECORD) {
         // start recording
-        this.recordSound.record().then(() => {
-          // the last OT is a 'nop' OT marking the end of the last recording
-          const lastTs = this.ots.length ? this.ots[this.ots.length - 1].ts : 0
-          this.recordStartOt = new ElicastNop(lastTs)
-          this.ots.push(this.recordStartOt)
+        await this.recordSound.record()
 
-          if (this.recordTimer !== -1) throw new Error('recordTimer is not cleared')
-          this.recordTimer = setInterval(this.recordTick, RECORD_TICK)
-        })
+        // the last OT is a 'nop' OT marking the end of the last recording
+        const lastTs = this.ots.length ? this.ots[this.ots.length - 1].ts : 0
+        this.recordStartOt = new ElicastNop(lastTs)
+        this.ots.push(this.recordStartOt)
+
+        if (this.recordTimer !== -1) throw new Error('recordTimer is not cleared')
+        this.recordTimer = setInterval(this.recordTick, RECORD_TICK)
       } else if (prevPlayMode === PlayMode.RECORD && !playMode.isRecording()) {
         // end recording
-        this.recordSound.stopRecording().then(() => {
-          const ts = this.recordStartOt.getRelativeTS()
-          this.ots.push(new ElicastNop(ts))
-          this.recordStartOt = null
+        await this.recordSound.stopRecording()
 
-          clearInterval(this.recordTimer)
-          this.recordTimer = -1
-          this.recordAudioChunks = null
-        })
+        const ts = this.recordStartOt.getRelativeTS()
+        this.ots.push(new ElicastNop(ts))
+        this.recordStartOt = null
+
+        clearInterval(this.recordTimer)
+        this.recordTimer = -1
+        this.recordAudioChunks = null
       } else if (prevPlayMode === PlayMode.RECORD && playMode === PlayMode.RECORD_EXERCISE) {
         // start recording exercise
         this.recordExerciseSession = new ExerciseSession(this.ots)
@@ -220,27 +221,32 @@ export default {
         // start playback
         if (this.playbackTimer !== -1) throw new Error('playbackTimer is not cleared')
 
-        this.recordSound.load().then((sound) => {
-          sound.seek(this.ts / 1000)
-          sound.play()
+        this.playbackSound = await this.recordSound.load()
+        this.playbackSound.seek(this.ts / 1000)
+        this.playbackSound.play()
 
-          this.playbackStartTs = this.ts
-          this.playbackStartTime = Date.now()
-          this.playbackSound = sound
+        this.playbackStartTs = this.ts
+        this.playbackStartTime = Date.now()
 
-          const tick = () => {
-            this.playbackTick()
-            this.playbackTimer = setTimeout(tick, PLAYBACK_TICK)
-          }
+        const tick = () => {
+          this.playbackTick()
           this.playbackTimer = setTimeout(tick, PLAYBACK_TICK)
-        })
+        }
+        this.playbackTimer = setTimeout(tick, PLAYBACK_TICK)
       } else if (prevPlayMode === PlayMode.PLAYBACK) {
         // pause playback
+
         this.playbackSound.stop()
+        this.playbackSound = null
+
+        this.playbackStartTs = -1
+        this.playStartTime = -1
 
         clearTimeout(this.playbackTimer)
         this.playbackTimer = -1
       }
+
+      this.playModeReady = true
     }
   },
 
@@ -299,6 +305,8 @@ export default {
       cmCursor.style.visibility = cmCursor.style.visibility === 'visible' ? 'hidden' : 'visible'
     },
     togglePlayMode () {
+      if (!this.playModeReady) return
+
       const toggleState = {
         [PlayMode.PLAYBACK]: PlayMode.PAUSE,
         [PlayMode.PAUSE]: PlayMode.PLAYBACK,
@@ -306,15 +314,19 @@ export default {
         [PlayMode.RECORD]: PlayMode.STANDBY
       }
       this.playMode = toggleState[this.playMode]
+      this.playModeReady = false
 
       _.defer(this.$refs.slider.layout)
     },
     toggleRecordExercise () {
+      if (!this.playModeReady) return
+
       const toggleState = {
         [PlayMode.RECORD]: PlayMode.RECORD_EXERCISE,
         [PlayMode.RECORD_EXERCISE]: PlayMode.RECORD
       }
       this.playMode = toggleState[this.playMode]
+      this.playModeReady = false
 
       _.defer(this.$refs.slider.layout)
     }
@@ -334,14 +346,21 @@ export default {
 
   button {
     position: absolute;
-    top: 0.5rem;
-    right: 0.5rem;
+    top: .5rem;
+    right: .5rem;
     z-index: 100;
     cursor: pointer;
   }
 
-  .exercise {
-    color: red;
+  .readonly-block {
+    border-radius: .1em;
+    background-color: #ddd;
+  }
+
+  .exercise-block {
+    padding: .2rem 0;
+    border-radius: .2em;
+    background-color: #ddd;
   }
 }
 

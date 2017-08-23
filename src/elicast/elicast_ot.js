@@ -257,6 +257,27 @@ ElicastOT.redrawExerciseAreas = function (cm, ots) {
     })
 }
 
+ElicastOT.redrawRecordingExerciseArea = function (cm, ots) {
+  ElicastOT.clearRecordingExerciseArea(cm)
+
+  const cmContent = cm.doc.getValue()
+
+  const exerciseArea = getAreas(ots).pop()
+  if (!exerciseArea || exerciseArea.type !== 'exercise') {
+    throw new Error('Invalid exercise area')
+  }
+
+  const fromLineCh = posToLineCh(cmContent, exerciseArea.fromPos)
+  const toLineCh = posToLineCh(cmContent, exerciseArea.toPos)
+  cm.doc.markText(fromLineCh, toLineCh, { className: 'recording-exercise-block' })
+}
+
+ElicastOT.clearRecordingExerciseArea = function (cm) {
+  cm.doc.getAllMarks()
+    .filter(marker => marker.className === 'recording-exercise-block')
+    .forEach(marker => marker.clear())
+}
+
 /*  This function convert CodeMirror's current selection to Elicast
  *  "selection" OT. To only capture the selection changes, call this
  *  function when `CodeMirror.doc.beforeSelectionChange` event is fired.
@@ -308,12 +329,12 @@ ElicastOT.makeOTFromCMChange = function (cm, changeObj, ts, exId) {
   return new ElicastText(ts, fromPos, toPos, insertedText, removedText, exId)
 }
 
-ElicastOT.isChangeAllowed = function (ots, exerciseSession, cm, changeObj) {
+ElicastOT.isChangeAllowed = function (ots, recordExerciseSession, cm, changeObj) {
   const cmContent = cm.doc.getValue()
   const fromPos = lineChToPos(cmContent, changeObj.from)
   const toPos = lineChToPos(cmContent, changeObj.to)
 
-  if (!exerciseSession) {
+  if (!recordExerciseSession) {
     // Prevent to edit inside of existing exercise areas
     const areas = getAreas(ots)
     for (const area of areas) {
@@ -323,15 +344,13 @@ ElicastOT.isChangeAllowed = function (ots, exerciseSession, cm, changeObj) {
     }
     return true
   } else {
-    const exerciseStartIndex = ots.indexOf(exerciseSession.startOT)
     // Only allow current exercise area
-    const exOts = ots.slice(exerciseStartIndex)
+    const exOts = recordExerciseSession.getExerciseOTs()
     const areas = getAreas(exOts)
 
     if (areas.length === 0) {
       return true
     } else if (areas.length > 1 || areas[0].type !== 'exercise') {
-      console.log(areas)
       throw new Error('Exercise area is inconsistent')
     }
 

@@ -72,23 +72,18 @@ export class ElicastText extends ElicastOT {
   }
 }
 
-export class ElicastExPlaceHolder extends ElicastOT {
-  constructor (ts, exId, solutionOts) {
+export class ElicastExercise extends ElicastOT {
+  constructor (ts, exId) {
     super(ts, 'exPlaceholder')
 
     if (!_.isInteger(exId)) throw new Error('Invalid exId')
     if (!(exId >= 0)) throw new Error('Invalid exId')
-    if (!_.isArray(solutionOts)) throw new Error('Invalid solutionOts')
-    solutionOts.forEach(ot => {
-      if (!(ot instanceof ElicastOT)) throw new Error('Invalid solutionOts')
-    })
 
     this.exId = exId
-    this.solutionOts = solutionOts
   }
 }
 
-export class ElicastExShow extends ElicastOT {
+export class ElicastExerciseShow extends ElicastOT {
   constructor (ts, exId, description) {
     super(ts, 'exShow')
 
@@ -152,22 +147,40 @@ function isAreaConflict (area, fromPos, toPos) {
 
 function getAreas (ots) {
   const areas = []
-  for (const ot of ots) {
-    if (ot.command === 'text') {
-      if (ot.removedText.length > 0) {
-        OTArea.remove(areas, 'text', ot.fromPos, ot.fromPos + ot.removedText.length)
-      }
-      if (ot.insertedText.length > 0) {
-        OTArea.insert(areas, 'text', ot.fromPos, ot.fromPos + ot.insertedText.length, true)
-      }
-    } else if (ot.command === 'exPlaceholder') {
-      const exerciseAreas = getAreas(ot.solutionOts)
-      if (exerciseAreas.length !== 1 || exerciseAreas[0].type !== 'text') {
-        throw new Error('Solution OT must be a single text area')
-      }
 
-      const exerciseArea = exerciseAreas[0]
-      OTArea.insert(areas, 'exercise', exerciseArea.fromPos, exerciseArea.toPos, false)
+  for (let i = 0; i < ots.length; i++) {
+    const ot = ots[i]
+    switch (ot.constructor) {
+      case ElicastText:
+        if (ot.removedText.length > 0) {
+          OTArea.remove(areas, 'text', ot.fromPos, ot.fromPos + ot.removedText.length)
+        }
+        if (ot.insertedText.length > 0) {
+          OTArea.insert(areas, 'text', ot.fromPos, ot.fromPos + ot.insertedText.length, true)
+        }
+        break
+      case ElicastExercise:
+        let j = i + 1
+
+        // find the last OT of the current exercise
+        for (; j < ots.length; j++) {
+          if (ots[j] instanceof ElicastExercise) {
+            if (ots[j].exId !== ot.exId) throw new Error('Invalid exId')
+            break
+          }
+        }
+        const exerciseAreas = getAreas(ots.slice(i + 1, j))
+        i = j
+
+        if (exerciseAreas.length === 0) break
+        if (exerciseAreas.length !== 1 || exerciseAreas[0].type !== 'text') {
+          throw new Error('Solution OT must be a single text area')
+        }
+
+        const exerciseArea = exerciseAreas[0]
+        OTArea.insert(areas, 'exercise', exerciseArea.fromPos, exerciseArea.toPos, false)
+
+        break
     }
   }
 
@@ -203,9 +216,9 @@ ElicastOT.applyOtToCM = function (cm, ot) {
     const toLineCh = posToLineCh(cmContent, ot.toPos)
     cm.doc.replaceRange(ot.insertedText, fromLineCh, toLineCh)
   } else if (ot.command === 'exPlaceholder') {
-    throw new Error('Not implemented')
+    return
   } else if (ot.command === 'exShow') {
-    throw new Error('Not implemented')
+    return
   } else {
     throw new Error('Invalid OT command', ot.command)
   }
@@ -226,6 +239,22 @@ ElicastOT.revertOtToCM = function (cm, ot) {
 
     cm.doc.replaceRange(ot.removedText, fromLineCh, toLineCh)
   }
+}
+
+ElicastOT.redrawExerciseAreas = function (cm, ots) {
+  cm.doc.getAllMarks()
+    .filter(marker => marker.className === 'exercise')
+    .forEach(marker => marker.clear())
+
+  const cmContent = cm.doc.getValue()
+
+  getAreas(ots)
+    .filter(area => area.type === 'exercise')
+    .forEach(area => {
+      const fromLineCh = posToLineCh(cmContent, area.fromPos)
+      const toLineCh = posToLineCh(cmContent, area.toPos)
+      cm.doc.markText(fromLineCh, toLineCh, { className: 'exercise' })
+    })
 }
 
 /*  This function convert CodeMirror's current selection to Elicast
@@ -253,13 +282,6 @@ ElicastOT.makeOTFromCMSelection = function (cm, ts) {
   return new ElicastSelection(ts, fromPos, toPos)
 }
 
-ElicastOT.makeOTFromExercise = function (ots, exerciseStartOt, ts) {
-  const exerciseStartIndex = ots.indexOf(exerciseStartOt)
-  const solutionOts = ots.splice(exerciseStartIndex)
-
-  return new ElicastExPlaceHolder(ts, 1, solutionOts)
-}
-
 /*  This function convert CodeMirror's selection object
  *  (from `cm.beforeChange` event) to Elicast "text" OT.
  *
@@ -275,22 +297,23 @@ ElicastOT.makeOTFromExercise = function (ots, exerciseStartOt, ts) {
  *      line/ch-cordinate to position-cordinate, we need "before changed" content
  *      of the editor.
  */
-ElicastOT.makeOTFromCMChange = function (cm, changeObj, ts) {
+ElicastOT.makeOTFromCMChange = function (cm, changeObj, ts, exId) {
   const cmContent = cm.doc.getValue()
 
   const fromPos = lineChToPos(cmContent, changeObj.from)
   const toPos = lineChToPos(cmContent, changeObj.to)
+  const insertedText = changeObj.text.join('\n')
+  const removedText = cmContent.substring(fromPos, toPos)
 
-  return new ElicastText(ts, fromPos, toPos, changeObj.text.join('\n'), cmContent.substring(fromPos, toPos))
+  return new ElicastText(ts, fromPos, toPos, insertedText, removedText, exId)
 }
 
-ElicastOT.isChangeAllowed = function (ots, exerciseStartOt, cm, changeObj) {
+ElicastOT.isChangeAllowed = function (ots, exerciseSession, cm, changeObj) {
   const cmContent = cm.doc.getValue()
   const fromPos = lineChToPos(cmContent, changeObj.from)
   const toPos = lineChToPos(cmContent, changeObj.to)
-  const exerciseStartIndex = ots.indexOf(exerciseStartOt)
 
-  if (exerciseStartIndex < 0) {
+  if (!exerciseSession) {
     // Prevent to edit inside of existing exercise areas
     const areas = getAreas(ots)
     for (const area of areas) {
@@ -300,13 +323,15 @@ ElicastOT.isChangeAllowed = function (ots, exerciseStartOt, cm, changeObj) {
     }
     return true
   } else {
+    const exerciseStartIndex = ots.indexOf(exerciseSession.startOT)
     // Only allow current exercise area
     const exOts = ots.slice(exerciseStartIndex)
     const areas = getAreas(exOts)
 
     if (areas.length === 0) {
       return true
-    } else if (areas.length > 1 || areas[0].type !== 'text') {
+    } else if (areas.length > 1 || areas[0].type !== 'exercise') {
+      console.log(areas)
       throw new Error('Exercise area is inconsistent')
     }
 

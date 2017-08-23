@@ -41,11 +41,12 @@
 
 <script>
 import ElicastOT, { ElicastNop, ElicastText, ElicastSelection } from '@/elicast/elicast_ot'
+import ExerciseSession from '@/elicast/exercise-session'
+import RecordSound from './record-sound'
+import Slider from '@/components/slider'
 import { codemirror } from 'vue-codemirror'
 import 'codemirror/addon/selection/mark-selection'
 import 'codemirror/mode/python/python'
-import Slider from '@/components/slider'
-import RecordSound from './record-sound'
 import _ from 'lodash'
 
 class PlayMode {
@@ -99,7 +100,7 @@ export default {
       playMode: PlayMode.STANDBY,
       maxTs: 0,
       recordStartOt: null,
-      recordExerciseStartOt: null,
+      recordExerciseSession: null,
       recordSound: new RecordSound('audio/webm'),
       playbackStartTs: -1,
       playbackStartTime: -1,
@@ -154,11 +155,25 @@ export default {
       let newOtIdx = this.ots.findIndex(ot => ts < ot.ts)
       newOtIdx = (newOtIdx < 0 ? this.ots.length : newOtIdx) - 1
 
+      let shouldRedrawExerciseAreas = false
+
       for (let i = prevOtIdx + 1; i <= newOtIdx && i < this.ots.length; i++) {
-        ElicastOT.applyOtToCM(this.cm, this.ots[i])
+        const ot = this.ots[i]
+        ElicastOT.applyOtToCM(this.cm, ot)
+        if (ot instanceof ElicastText && ot._exId) {
+          shouldRedrawExerciseAreas = true
+        }
       }
       for (let i = prevOtIdx; i > newOtIdx && i >= 0; i--) {
+        const ot = this.ots[i]
         ElicastOT.revertOtToCM(this.cm, this.ots[i])
+        if (ot instanceof ElicastText && ot._exId) {
+          shouldRedrawExerciseAreas = true
+        }
+      }
+
+      if (shouldRedrawExerciseAreas) {
+        ElicastOT.redrawExerciseAreas(this.cm, this.ots.slice(0, newOtIdx + 1))
       }
 
       if (ts === this.$refs.slider.max) {
@@ -170,6 +185,7 @@ export default {
       if (!prevPlayMode.isRecording() && playMode === PlayMode.RECORD) {
         // start recording
         this.recordSound.record().then(() => {
+          // the last OT is a 'nop' OT marking the end of the last recording
           const lastTs = this.ots.length ? this.ots[this.ots.length - 1].ts : 0
           this.recordStartOt = new ElicastNop(lastTs)
           this.ots.push(this.recordStartOt)
@@ -190,14 +206,16 @@ export default {
         })
       } else if (prevPlayMode === PlayMode.RECORD && playMode === PlayMode.RECORD_EXERCISE) {
         // start recording exercise
+        this.recordExerciseSession = new ExerciseSession(this.ots)
         const ts = this.recordStartOt.getRelativeTS()
-        this.recordExerciseStartOt = new ElicastNop(ts)
-        this.ots.push(this.recordExerciseStartOt)
+        this.recordExerciseSession.startRecording(ts)
       } else if (prevPlayMode === PlayMode.RECORD_EXERCISE && playMode === PlayMode.RECORD) {
+        // end recording exercise
         const ts = this.recordStartOt.getRelativeTS()
-        const newOt = ElicastOT.makeOTFromExercise(this.ots, this.recordExerciseStartOt, ts)
-        this.ots.push(newOt)
-        this.recordExerciseStartOt = null
+        this.recordExerciseSession.endRecording(ts)
+        this.recordExerciseSession = null
+
+        ElicastOT.redrawExerciseAreas(this.cm, this.ots)
       } else if (playMode === PlayMode.PLAYBACK) {
         // start playback
         if (this.playbackTimer !== -1) throw new Error('playbackTimer is not cleared')
@@ -216,8 +234,6 @@ export default {
           }
           this.playbackTimer = setTimeout(tick, PLAYBACK_TICK)
         })
-
-        console.log(JSON.stringify(this.ots))
       } else if (prevPlayMode === PlayMode.PLAYBACK) {
         // pause playback
         this.playbackSound.stop()
@@ -230,6 +246,8 @@ export default {
 
   mounted (t) {
     this.cursorBlinkTimer = setInterval(this.toggleCursorBlink, CURSOR_BLINK_RATE)
+
+    this.cm.on('mousedown', this.handleEditorMousedown)
   },
 
   beforeDestroy () {
@@ -240,20 +258,26 @@ export default {
     handleEditorBeforeChange (cm, changeObj) {
       if (!this.playMode.isRecording()) return
 
-      if (!ElicastOT.isChangeAllowed(this.ots, this.recordExerciseStartOt, cm, changeObj)) {
+      if (!ElicastOT.isChangeAllowed(this.ots, this.recordExerciseSession, cm, changeObj)) {
+        console.error('Editing non-editable area')
         changeObj.cancel()
         return
       }
       const ts = this.recordStartOt.getRelativeTS()
-      const newOt = ElicastOT.makeOTFromCMChange(cm, changeObj, ts)
-      this.ots.push(newOt)
+      const newOT = ElicastOT.makeOTFromCMChange(cm, changeObj, ts)
+      this.ots.push(newOT)
     },
     handleEditorCursorActivity (cm) {
       if (!this.playMode.isRecording()) return
 
       const ts = this.recordStartOt.getRelativeTS()
-      const newOt = ElicastOT.makeOTFromCMSelection(cm, ts)
-      this.ots.push(newOt)
+      const newOT = ElicastOT.makeOTFromCMSelection(cm, ts)
+      this.ots.push(newOT)
+    },
+    handleEditorMousedown (event) {
+      if (this.playMode === PlayMode.PLAYBACK) {
+        this.togglePlayMode()
+      }
     },
     handleSliderChange (val, isMouseDown) {
       if (isMouseDown) this.playMode = PlayMode.PAUSE
@@ -314,6 +338,10 @@ export default {
     right: 0.5rem;
     z-index: 100;
     cursor: pointer;
+  }
+
+  .exercise {
+    color: red;
   }
 }
 

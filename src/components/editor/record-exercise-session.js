@@ -23,7 +23,8 @@ export default class RecordExerciseSession {
 
   startRecording (ts) {
     const startOT = new ElicastExercise(ts, this.exId)
-    this.startOTIndex = this.ots.push(startOT) - 1
+    this.startOT = startOT
+    this.startOTIndex = this.ots.push(startOT)
   }
 
   finishRecording (ts) {
@@ -31,6 +32,7 @@ export default class RecordExerciseSession {
     this.ots.push(newOt)
 
     markExerciseOTs(this)
+    this.startOT._exLength = this.ots.length - this.startOTIndex
   }
 
   /**
@@ -45,6 +47,6 @@ export default class RecordExerciseSession {
   }
 
   getExerciseOTs () {
-    return this.ots.slice(this.startOTIndex)
+    return this.ots.slice(this.startOTIndex - 1) // -1 to include start ExercseOT
   }
 }

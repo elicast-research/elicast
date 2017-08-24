@@ -160,17 +160,9 @@ function getAreas (ots) {
         }
         break
       case ElicastExercise:
-        let j = i + 1
-
-        // find the last OT of the current exercise
-        for (; j < ots.length; j++) {
-          if (ots[j] instanceof ElicastExercise) {
-            if (ots[j].exId !== ot.exId) throw new Error('Invalid exId')
-            break
-          }
-        }
-        const exerciseAreas = getAreas(ots.slice(i + 1, j))
-        i = j
+        const exEndOTIndex = (!_.isNil(ot._exLength)) ? i + ot._exLength : ots.length
+        const exerciseAreas = getAreas(ots.slice(i + 1, exEndOTIndex))
+        i = exEndOTIndex
 
         if (exerciseAreas.length === 0) break
         if (exerciseAreas.length !== 1 || exerciseAreas[0].type !== 'text') {

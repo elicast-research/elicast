@@ -32,7 +32,6 @@ export default class RecordExerciseSession {
     this.ots.push(newOt)
 
     markExerciseOTs(this)
-    this.startOT._exLength = this.ots.length - this.startOTIndex + 1
   }
 
   /**

@@ -86,7 +86,7 @@ export class OTAreaSet {
     return this
   }
 
-  remove (type, fromPos, toPos) {
+  remove (typeName, fromPos, toPos) {
     const removeLength = toPos - fromPos
 
     let removeShiftStartIndex = -1
@@ -103,7 +103,7 @@ export class OTAreaSet {
         shiftRemainingAreas(this.areas, removeShiftStartIndex, -removeLength)
         break
       } else if (area.fromPos <= fromPos && fromPos < area.toPos) {
-        if (type !== area.type) {
+        if (typeName !== area.type) {
           throw new Error('Failed to remove area due to type mismatch')
         }
         if (area.toPos < toPos) {

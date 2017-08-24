@@ -61,6 +61,8 @@
 .CodeMirror {
   $readonlyBackgroundColor: rgba(0, 0, 0, 0.066);
 
+  font-family: Menlo, Consolas, 'DejaVu Sans Mono', monospace;
+
   .recording-exercise ~ & {
     background-color: $readonlyBackgroundColor;
   }

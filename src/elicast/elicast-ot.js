@@ -145,13 +145,14 @@ function isAreaConflict (area, fromPos, toPos) {
     (area.fromPos < fromPos && fromPos < area.toPos)
 }
 
-function getAreas (ots, areaType = ElicastOTAreaSet.TEXT) {
+function getAreas (ots, isInExercise = false) {
   const areaSet = new ElicastOTAreaSet()
 
   for (let i = 0; i < ots.length; i++) {
     const ot = ots[i]
     switch (ot.constructor) {
       case ElicastText:
+        const areaType = !isInExercise ? ElicastOTAreaSet.TEXT : ElicastOTAreaSet.EXERCISE_BUILD
         if (ot.removedText.length > 0) {
           areaSet.remove(areaType, ot.fromPos, ot.fromPos + ot.removedText.length)
         }
@@ -160,9 +161,10 @@ function getAreas (ots, areaType = ElicastOTAreaSet.TEXT) {
         }
         break
       case ElicastExercise:
-        const exEndOTIndex = !_.isNil(ot._exLength) ? i + ot._exLength : ots.length
-        const exerciseAreas = getAreas(ots.slice(i + 1, exEndOTIndex), ElicastOTAreaSet.EXERCISE_BUILD)
-        i = exEndOTIndex
+        let endIndex = ots.findIndex((ot, idx) => idx > i && ot instanceof ElicastExercise)
+        endIndex = endIndex < 0 ? ots.length : endIndex
+        const exerciseAreas = getAreas(ots.slice(i + 1, endIndex), true)
+        i = endIndex
 
         if (exerciseAreas.length === 0) break
         if (exerciseAreas.length !== 1) {
@@ -337,6 +339,12 @@ ElicastOT.isChangeAllowed = function (ots, recordExerciseSession, cm, changeObj)
     return true
   } else {
     // Only allow current exercise area
+
+    // Exercise cannot be initiated with text removal
+    if (!recordExerciseSession.isInitiated() && fromPos !== toPos) {
+      return false
+    }
+
     const exOts = recordExerciseSession.getExerciseOTs()
     const areas = getAreas(exOts)
 

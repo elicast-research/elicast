@@ -1,10 +1,10 @@
 <template>
   <div class="container">
-    <h1>/* Elicast Editor */</h1>
     <div class="top-controls">
       <button class="btn btn-sm btn-light"
               @click="showLoadSaveModal">Load/Save</button>
     </div>
+    <h1>/* Elicast Editor */</h1>
     <ElicastEditor :initial-ots="ots"></ElicastEditor>
     <LoadSaveModal ref="loadSaveModal" @elicastLoaded="loadSaveModalElicastLoaded"></LoadSaveModal>
   </div>
@@ -30,8 +30,8 @@ export default {
   data () {
     return {
       ots: [
-        new ElicastText(1, 0, 0, INITIAL_CODE, ''),
-        new ElicastSelection(2, 4, 9)
+        new ElicastText(0, 0, 0, INITIAL_CODE, ''),
+        new ElicastSelection(0, 0, 0)
       ]
     }
   },
@@ -78,7 +78,7 @@ h1 {
 }
 
 .top-controls {
-  text-align: right;
+  float: right;
   padding-bottom: 0.1rem;
 
   button {

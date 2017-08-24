@@ -29,6 +29,7 @@ class PlayMode {
 
 const EDITOR_OPTIONS = {
   mode: 'python',
+  theme: 'solarized',
   lineNumbers: true,
   cursorBlinkRate: 0, // disable default blinker which is not working in no-focus state
   showCursorWhenSelecting: true,
@@ -52,7 +53,7 @@ export default {
       PlayMode,
       code: '',
       ots: this.initialOts.slice(),
-      ts: 0,
+      ts: -1,
       playMode: PlayMode.STANDBY,
       playModeReady: true,
       maxTs: 0,
@@ -224,10 +225,7 @@ export default {
 
     this.cm.on('mousedown', this.handleEditorMousedown)
 
-    if (this.ots.length > 0) {
-      const lastOt = this.ots[this.ots.length - 1]
-      this.ts = lastOt.ts
-    }
+    this.ts = this.ots.length && this.ots[this.ots.length - 1].ts
   },
 
   beforeDestroy () {

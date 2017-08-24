@@ -5,7 +5,7 @@
       <button class="btn btn-sm btn-light"
               @click="showLoadSaveModal">Load/Save</button>
     </div>
-    <ElicastEditor></ElicastEditor>
+    <ElicastEditor :initial-ots="ots"></ElicastEditor>
     <LoadSaveModal ref="loadSaveModal" @elicastLoaded="loadSaveModalElicastLoaded"></LoadSaveModal>
   </div>
 </template>
@@ -16,10 +16,24 @@ import ElicastEditor from '@/components/editor'
 import LoadSaveModal from '@/components/LoadSaveModal'
 import _ from 'lodash'
 
+// const INITIAL_CODE = `def hello(thing):
+//   print(f"hello, {thing}!")
+//
+// hello("world")`
+
 export default {
   components: {
     ElicastEditor,
     LoadSaveModal
+  },
+
+  data () {
+    return {
+      ots: [
+        // new ElicastText(0, 0, 0, INITIAL_CODE, ''),
+        // new ElicastSelection(1, 0, 1)
+      ]
+    }
   },
 
   methods: {
@@ -49,6 +63,8 @@ export default {
         }
         ots.push(Object.assign(new OTClass(), ot))
       }
+
+      // const recordBlob = new Blob()
     }
   }
 }

@@ -1,4 +1,4 @@
-import ElicastOT, { ElicastNop, ElicastText, ElicastSelection } from '@/elicast/elicast-ot'
+import ElicastOT, { ElicastNop, ElicastText } from '@/elicast/elicast-ot'
 import RecordExerciseSession from './record-exercise-session'
 import RecordSound from './record-sound'
 import Slider from '@/components/Slider'
@@ -39,21 +39,19 @@ const CURSOR_BLINK_RATE = 530 // CodeMirror default cursorBlinkRate: 530ms
 const PLAYBACK_TICK = 1000 / 120
 const RECORD_TICK = 1000 / 10
 
-const INITIAL_CODE = `def hello(thing):
-  print(f"hello, {thing}!")
-
-hello("world")`
-
 export default {
+  props: {
+    initialOts: {
+      type: Array,
+      default: () => []
+    }
+  },
+
   data () {
     return {
       PlayMode,
-
-      code: INITIAL_CODE,
-      ots: [
-        new ElicastText(0, 0, 0, INITIAL_CODE, ''),
-        new ElicastSelection(1, 0, 0)
-      ],
+      code: '',
+      ots: this.initialOts.slice(),
       ts: 0,
       playMode: PlayMode.STANDBY,
       playModeReady: true,

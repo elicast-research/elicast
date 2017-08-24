@@ -223,6 +223,11 @@ export default {
     this.cursorBlinkTimer = setInterval(this.toggleCursorBlink, CURSOR_BLINK_RATE)
 
     this.cm.on('mousedown', this.handleEditorMousedown)
+
+    if (this.ots.length > 0) {
+      const lastOt = this.ots[this.ots.length - 1]
+      this.ts = lastOt.ts
+    }
   },
 
   beforeDestroy () {

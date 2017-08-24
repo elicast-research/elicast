@@ -16,10 +16,10 @@ import ElicastEditor from '@/components/editor'
 import LoadSaveModal from '@/components/LoadSaveModal'
 import _ from 'lodash'
 
-// const INITIAL_CODE = `def hello(thing):
-//   print(f"hello, {thing}!")
-//
-// hello("world")`
+const INITIAL_CODE = `def hello(thing):
+  print(f"hello, {thing}!")
+
+hello("world")`
 
 export default {
   components: {
@@ -30,8 +30,8 @@ export default {
   data () {
     return {
       ots: [
-        // new ElicastText(0, 0, 0, INITIAL_CODE, ''),
-        // new ElicastSelection(1, 0, 1)
+        new ElicastText(1, 0, 0, INITIAL_CODE, ''),
+        new ElicastSelection(2, 4, 9)
       ]
     }
   },

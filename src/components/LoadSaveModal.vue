@@ -30,7 +30,7 @@
 <script>
 import axios from 'axios'
 import moment from 'moment'
-import Modal from 'bootstrap/js/src/modal'
+import Modal from 'exports-loader?Modal!bootstrap/js/dist/modal'
 
 export default {
   data () {

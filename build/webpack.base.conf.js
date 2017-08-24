@@ -77,6 +77,7 @@ module.exports = {
   plugins: [
     new webpack.ProvidePlugin({
       jQuery: 'jquery',
+      Util: "exports-loader?Util!bootstrap/js/dist/util"
     })
   ]
 }

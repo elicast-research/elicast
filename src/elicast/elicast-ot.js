@@ -1,6 +1,6 @@
 import _ from 'lodash'
 
-import OTArea from './ot_area.js'
+import OTArea from './ot-area.js'
 
 /*  OT for Elicast
  *

@@ -65,7 +65,7 @@ var webpackConfig = merge(baseWebpackConfig, {
     }),
     new HtmlWebpackPlugin({
       filename: config.build.index,
-      template: 'src/assets/index.html',
+      template: 'html/index.html',
       inject: true,
       minify: {
         removeComments: true,
@@ -78,7 +78,7 @@ var webpackConfig = merge(baseWebpackConfig, {
     new HtmlWebpackPlugin({
       chunks: ['editor', 'manifest'],
       filename: 'editor.html',
-      template: 'src/assets/editor.html',
+      template: 'html/editor.html',
       inject: true,
       minify: {
         removeComments: true,
@@ -91,7 +91,7 @@ var webpackConfig = merge(baseWebpackConfig, {
     new HtmlWebpackPlugin({
       chunks: ['player', 'manifest'],
       filename: 'player.html',
-      template: 'src/assets/player.html',
+      template: 'html/player.html',
       inject: true,
       minify: {
         removeComments: true,

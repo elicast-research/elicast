@@ -28,17 +28,17 @@ module.exports = merge(baseWebpackConfig, {
     new HtmlWebpackPlugin({
       chunks: [],
       filename: 'index.html',
-      template: 'src/assets/index.html'
+      template: 'html/index.html'
     }),
     new HtmlWebpackPlugin({
       chunks: ['editor'],
       filename: 'editor.html',
-      template: 'src/assets/editor.html'
+      template: 'html/editor.html'
     }),
     new HtmlWebpackPlugin({
       chunks: ['player'],
       filename: 'player.html',
-      template: 'src/assets/player.html'
+      template: 'html/player.html'
     }),
     new FriendlyErrorsPlugin()
   ]

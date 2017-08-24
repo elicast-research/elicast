@@ -1,4 +1,4 @@
-import { ElicastExercise, ElicastText } from '@/elicast/elicast_ot'
+import { ElicastExercise, ElicastText } from '@/elicast/elicast-ot'
 import _ from 'lodash'
 
 function markExerciseOTs (recordExerciseSession) {

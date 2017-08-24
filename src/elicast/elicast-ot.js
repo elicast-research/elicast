@@ -1,6 +1,6 @@
 import _ from 'lodash'
 
-import OTArea from './ot-area.js'
+import ElicastOTAreaSet from './elicast-ot-area-set'
 
 /*  OT for Elicast
  *
@@ -145,38 +145,38 @@ function isAreaConflict (area, fromPos, toPos) {
     (area.fromPos < fromPos && fromPos < area.toPos)
 }
 
-function getAreas (ots) {
-  const areas = []
+function getAreas (ots, areaType = ElicastOTAreaSet.TEXT) {
+  const areaSet = new ElicastOTAreaSet()
 
   for (let i = 0; i < ots.length; i++) {
     const ot = ots[i]
     switch (ot.constructor) {
       case ElicastText:
         if (ot.removedText.length > 0) {
-          OTArea.remove(areas, 'text', ot.fromPos, ot.fromPos + ot.removedText.length)
+          areaSet.remove(areaType, ot.fromPos, ot.fromPos + ot.removedText.length)
         }
         if (ot.insertedText.length > 0) {
-          OTArea.insert(areas, 'text', ot.fromPos, ot.fromPos + ot.insertedText.length, true)
+          areaSet.insert(areaType, ot.fromPos, ot.fromPos + ot.insertedText.length, true)
         }
         break
       case ElicastExercise:
-        const exEndOTIndex = (!_.isNil(ot._exLength)) ? i + ot._exLength : ots.length
-        const exerciseAreas = getAreas(ots.slice(i + 1, exEndOTIndex))
+        const exEndOTIndex = !_.isNil(ot._exLength) ? i + ot._exLength : ots.length
+        const exerciseAreas = getAreas(ots.slice(i + 1, exEndOTIndex), ElicastOTAreaSet.EXERCISE_BUILD)
         i = exEndOTIndex
 
         if (exerciseAreas.length === 0) break
-        if (exerciseAreas.length !== 1 || exerciseAreas[0].type !== 'text') {
-          throw new Error('Solution OT must be a single text area')
+        if (exerciseAreas.length !== 1) {
+          throw new Error('Solution OT must be a single area')
         }
 
         const exerciseArea = exerciseAreas[0]
-        OTArea.insert(areas, 'exercise', exerciseArea.fromPos, exerciseArea.toPos, false)
+        areaSet.insert(ElicastOTAreaSet.EXERCISE, exerciseArea.fromPos, exerciseArea.toPos, false)
 
         break
     }
   }
 
-  return areas
+  return areaSet.toArray()
 }
 
 /*  This function apply given OT to CodeMirror
@@ -241,7 +241,7 @@ ElicastOT.redrawExerciseAreas = function (cm, ots) {
   const cmContent = cm.doc.getValue()
 
   getAreas(ots)
-    .filter(area => area.type === 'exercise')
+    .filter(area => area.type === ElicastOTAreaSet.EXERCISE)
     .forEach(area => {
       const fromLineCh = posToLineCh(cmContent, area.fromPos)
       const toLineCh = posToLineCh(cmContent, area.toPos)
@@ -255,7 +255,7 @@ ElicastOT.redrawRecordingExerciseArea = function (cm, ots) {
   const cmContent = cm.doc.getValue()
 
   const exerciseArea = getAreas(ots).pop()
-  if (!exerciseArea || exerciseArea.type !== 'exercise') {
+  if (exerciseArea.type !== ElicastOTAreaSet.EXERCISE) {
     throw new Error('Invalid exercise area')
   }
 
@@ -330,7 +330,7 @@ ElicastOT.isChangeAllowed = function (ots, recordExerciseSession, cm, changeObj)
     // Prevent to edit inside of existing exercise areas
     const areas = getAreas(ots)
     for (const area of areas) {
-      if (area.type === 'exercise' && isAreaConflict(area, fromPos, toPos)) {
+      if (area.type === ElicastOTAreaSet.EXERCISE && isAreaConflict(area, fromPos, toPos)) {
         return false
       }
     }
@@ -342,7 +342,7 @@ ElicastOT.isChangeAllowed = function (ots, recordExerciseSession, cm, changeObj)
 
     if (areas.length === 0) {
       return true
-    } else if (areas.length > 1 || areas[0].type !== 'exercise') {
+    } else if (areas.length > 1 || areas[0].type !== ElicastOTAreaSet.EXERCISE) {
       throw new Error('Exercise area is inconsistent')
     }
 

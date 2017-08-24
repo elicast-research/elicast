@@ -82,7 +82,7 @@ OTArea.remove = function (areas, type, fromPos, toPos) {
 
     if (fromPos < area.fromPos) {
       if (area.fromPos < toPos) {
-        console.error('Does not support to remove mixed area (non-typed area + typed area)')
+        throw new Error('Does not support to remove mixed area (non-typed area + typed area)')
       } else {
         shiftRemainingAreas(areas, i, -(toPos - fromPos))
         if (i > 0 && areas[i - 1].toPos === area.fromPos &&
@@ -95,9 +95,9 @@ OTArea.remove = function (areas, type, fromPos, toPos) {
       break
     } else if (area.fromPos <= fromPos && fromPos < area.toPos) {
       if (type !== area.type) {
-        console.error('Failed to remove area due to type mismatch')
+        throw new Error('Failed to remove area due to type mismatch')
       } else if (area.toPos < toPos) {
-        console.error('Does not support to remove mixed area (typed area + non-typed area)')
+        throw new Error('Does not support to remove mixed area (typed area + non-typed area)')
       } else {
         area.toPos -= toPos - fromPos
         shiftRemainingAreas(areas, i + 1, -(toPos - fromPos))

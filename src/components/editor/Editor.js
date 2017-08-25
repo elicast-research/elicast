@@ -1,4 +1,4 @@
-import ElicastOT, { ElicastNop, ElicastText } from '@/elicast/elicast-ot'
+import ElicastOT, { ElicastNop, ElicastText, ElicastSelection } from '@/elicast/elicast-ot'
 import RecordExerciseSession from './record-exercise-session'
 import RecordSound from './record-sound'
 import Slider from '@/components/Slider'

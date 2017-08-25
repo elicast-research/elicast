@@ -5,9 +5,12 @@ import Promise from 'bluebird'
  *  RecordSound
  */
 export default class RecordSound {
-  constructor (mimeType) {
+  constructor (mimeType, recordedBlob = null) {
+    if (recordedBlob !== null && mimeType !== recordedBlob.type) throw new Error('MimeType is not matched')
+
     this.mediaRecorder = null
-    this.recordedBlob = null
+    this.mimeType = mimeType
+    this.recordedBlob = recordedBlob
     this.chunks = []
   }
 
@@ -28,7 +31,7 @@ export default class RecordSound {
     this.mediaRecorder.stop()
     await stopPromise
 
-    const newBlob = new Blob(this.chunks)
+    const newBlob = new Blob(this.chunks, { type: this.mimeType })
     this.recordedBlob = !this.recordedBlob ? newBlob
       : new Blob([this.recordedBlob, newBlob], { type: this.mimeType })
   }

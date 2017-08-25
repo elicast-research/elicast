@@ -19,7 +19,7 @@
           </ul>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-primary">Save</button>
+          <button type="button" class="btn btn-primary" @click="saveElicast">Save</button>
           <button type="button" class="btn btn-secondary" @click="close">Close</button>
         </div>
       </div>
@@ -29,13 +29,30 @@
 
 <script>
 import axios from 'axios'
+import blobUtil from 'blob-util'
 import moment from 'moment'
 import Modal from 'exports-loader?Modal!bootstrap/js/dist/modal'
+import qs from 'qs'
+import _ from 'lodash'
+
+import { ElicastNop, ElicastText, ElicastSelection, ElicastExercise, ElicastExerciseShow } from '@/elicast/elicast-ot'
+
+const OT_CLASS_MAP = _.keyBy(
+  [
+    ElicastNop,
+    ElicastText,
+    ElicastSelection,
+    ElicastExercise,
+    ElicastExerciseShow
+  ],
+  otClass => otClass.COMMAND
+)
 
 export default {
   data () {
     return {
       modalInstance: null,
+      editingElicast: null,
       isShow: false,
       elicasts: []
     }
@@ -66,24 +83,46 @@ export default {
       }
       this.isShow = false
     },
-    open () {
+    async open (editingElicast) {
       if (this.modalInstance === null) return
 
-      axios.get('http://anne.pjknkda.com:7822/elicast')
-        .then(function (response) {
-          this.elicasts = response.data.elicasts
-          this.isShow = true
-          this.modalInstance.show()
-        }.bind(this))
-        .catch(error => console.error(error))
+      this.editingElicast = editingElicast
+
+      const response = await axios.get('http://anne.pjknkda.com:7822/elicast')
+      this.elicasts = response.data.elicasts
+      this.isShow = true
+      this.modalInstance.show()
     },
-    loadElicast (elicastId) {
-      axios.get('http://anne.pjknkda.com:7822/elicast/' + elicastId)
-        .then(function (response) {
-          this.$emit('elicastLoaded', response.data.elicast)
-          this.close()
-        }.bind(this))
-        .catch(error => console.error(error))
+    async loadElicast (elicastId) {
+      const response = await axios.get('http://anne.pjknkda.com:7822/elicast/' + elicastId)
+      const elicastRaw = response.data.elicast
+
+      const elicast = {
+        id: elicastRaw.id,
+        title: elicastRaw.title,
+        ots: elicastRaw.ots.map(
+          otRaw => OT_CLASS_MAP[otRaw.command].fromJSON(otRaw)),
+        recordedBlob: elicastRaw.voice_blob === '' ? null : await blobUtil.dataURLToBlob(elicastRaw.voice_blob)
+      }
+
+      this.$emit('elicastLoaded', elicast)
+      this.close()
+    },
+    async saveElicast () {
+      const elicast = this.editingElicast
+      const response = await axios({
+        method: elicast.id === null ? 'put' : 'post',
+        url: 'http://anne.pjknkda.com:7822/elicast' + (elicast.id === null ? '' : '/' + elicast.id),
+        data: qs.stringify({
+          title: elicast.title,
+          ots: JSON.stringify(elicast.ots),
+          voice_blob: elicast.recordedBlob === null ? '' : await blobUtil.blobToDataURL(elicast.recordedBlob)
+        })
+      })
+
+      elicast.id = response.data.elicast.id
+      this.$emit('elicastSaved', elicast)
+      this.close()
     }
   },
 

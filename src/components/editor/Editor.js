@@ -41,33 +41,32 @@ const CURSOR_BLINK_RATE = 530 // CodeMirror default cursorBlinkRate: 530ms
 const PLAYBACK_TICK = 1000 / 120
 const RECORD_TICK = 1000 / 10
 
+const INITIAL_COMPONENT_DATA = function () {
+  return {
+    PlayMode,
+    code: '',
+    elicastId: null,
+    elicastTitle: 'Untitiled',
+    ots: [],
+    ts: -1,
+    playMode: PlayMode.STANDBY,
+    playModeReady: true,
+    maxTs: 0,
+    recordStartOt: null,
+    recordExerciseSession: null,
+    recordSound: new RecordSound('audio/webm'),
+    playbackStartTs: -1,
+    playbackStartTime: -1,
+
+    cursorBlinkTimer: -1,
+    recordTimer: -1,
+    playbackTimer: -1
+  }
+}
+
 export default {
-  props: {
-    initialOts: {
-      type: Array,
-      default: () => []
-    }
-  },
-
   data () {
-    return {
-      PlayMode,
-      code: '',
-      ots: this.initialOts.slice(),
-      ts: -1,
-      playMode: PlayMode.STANDBY,
-      playModeReady: true,
-      maxTs: 0,
-      recordStartOt: null,
-      recordExerciseSession: null,
-      recordSound: new RecordSound('audio/webm'),
-      playbackStartTs: -1,
-      playbackStartTime: -1,
-
-      cursorBlinkTimer: -1,
-      recordTimer: -1,
-      playbackTimer: -1
-    }
+    return INITIAL_COMPONENT_DATA()
   },
 
   computed: {
@@ -92,6 +91,14 @@ export default {
     },
     sliderColor () {
       return this.playMode.isRecording() ? 'red' : 'black'
+    },
+    currentElicast () {
+      return {
+        id: this.elicastId,
+        title: this.elicastTitle,
+        ots: this.ots,
+        recordedBlob: this.recordSound.recordedBlob
+      }
     }
   },
 
@@ -319,6 +326,18 @@ export default {
       this.playModeReady = false
 
       _.defer(this.$refs.slider.layout)
+    },
+    loadElicast (elicast) {
+      // FIXME : `watch` on some parameters are not prepared for load
+
+      const newData = INITIAL_COMPONENT_DATA()
+      Object.assign(newData, {
+        elicastId: elicast.id,
+        elicastTitle: elicast.title,
+        ots: elicast.ots,
+        recordSound: new RecordSound('audio/webm', elicast.recordedBlob)
+      })
+      Object.assign(this.$data, newData)
     }
   },
 

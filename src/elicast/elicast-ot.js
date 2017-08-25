@@ -28,12 +28,18 @@ export default class ElicastOT {
 }
 
 export class ElicastNop extends ElicastOT {
+  static COMMAND = 'nop'
+
   constructor (ts, time = Date.now()) {
-    super(ts, 'nop')
+    super(ts, ElicastNop.COMMAND)
 
     if (!_.isInteger(time)) throw new Error('Invalid time')
 
     this.time = time
+  }
+
+  static fromJSON (ot) {
+    return new this(ot.ts, ot.time)
   }
 
   getRelativeTS (time = Date.now()) {
@@ -42,8 +48,10 @@ export class ElicastNop extends ElicastOT {
 }
 
 export class ElicastSelection extends ElicastOT {
+  static COMMAND = 'selection'
+
   constructor (ts, fromPos, toPos) {
-    super(ts, 'selection')
+    super(ts, ElicastSelection.COMMAND)
 
     if (!_.isInteger(fromPos)) throw new Error('Invalid fromPos')
     if (!_.isInteger(toPos)) throw new Error('Invalid toPos')
@@ -52,11 +60,17 @@ export class ElicastSelection extends ElicastOT {
     this.fromPos = fromPos
     this.toPos = toPos
   }
+
+  static fromJSON (ot) {
+    return new this(ot.ts, ot.fromPos, ot.toPos)
+  }
 }
 
 export class ElicastText extends ElicastOT {
+  static COMMAND = 'text'
+
   constructor (ts, fromPos, toPos, insertedText, removedText) {
-    super(ts, 'text')
+    super(ts, ElicastText.COMMAND)
 
     if (!_.isInteger(fromPos)) throw new Error('Invalid fromPos')
     if (!_.isInteger(toPos)) throw new Error('Invalid toPos')
@@ -70,22 +84,34 @@ export class ElicastText extends ElicastOT {
     this.insertedText = insertedText
     this.removedText = removedText
   }
+
+  static fromJSON (ot) {
+    return new this(ot.ts, ot.fromPos, ot.toPos, ot.insertedText, ot.removedText)
+  }
 }
 
 export class ElicastExercise extends ElicastOT {
+  static COMMAND = 'exPlaceholder'
+
   constructor (ts, exId) {
-    super(ts, 'exPlaceholder')
+    super(ts, ElicastExercise.COMMAND)
 
     if (!_.isInteger(exId)) throw new Error('Invalid exId')
     if (!(exId >= 0)) throw new Error('Invalid exId')
 
     this.exId = exId
   }
+
+  static fromJSON (ot) {
+    return new this(ot.ts, ot.exId)
+  }
 }
 
 export class ElicastExerciseShow extends ElicastOT {
+  static COMMAND = 'exShow'
+
   constructor (ts, exId, description) {
-    super(ts, 'exShow')
+    super(ts, ElicastExerciseShow.COMMAND)
 
     if (!_.isInteger(exId)) throw new Error('Invalid exId')
     if (!(exId >= 0)) throw new Error('Invalid exId')
@@ -93,6 +119,10 @@ export class ElicastExerciseShow extends ElicastOT {
 
     this.exId = exId
     this.description = description
+  }
+
+  static fromJSON (ot) {
+    return new this(ot.ts, ot.exId, ot.description)
   }
 }
 

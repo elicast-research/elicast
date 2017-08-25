@@ -1,5 +1,9 @@
 <template>
   <div id="editor">
+    <div>
+      <span v-show="elicastId !== null">(ID-{{ elicastId }})</span>
+      <input class="elicast-title" v-model.trim="elicastTitle">
+    </div>
     <div class="editor-wrap">
       <codemirror ref="cm"
                   v-model="code"
@@ -75,13 +79,29 @@
 <script src="./Editor.js"></script>
 
 <style lang="scss">
-
 $codeFontFamily: Menlo, Consolas, 'DejaVu Sans Mono', monospace;
+
+.elicast-title {
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  outline: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: none;
+  border: none;
+  box-shadow: none;
+  display: inline-block;
+  font-size: 2rem;
+  width: 100%;
+}
 
 .editor-wrap {
   position: relative;
   border: 1px solid #eee;
   overflow: hidden;
+  margin-top: 1rem;
 
   .editor-right-pane {
     position: absolute;

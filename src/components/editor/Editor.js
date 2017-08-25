@@ -2,7 +2,7 @@ import ElicastOT, { ElicastNop, ElicastText, ElicastSelection } from '@/elicast/
 import RecordExerciseSession from './record-exercise-session'
 import RecordSound from './record-sound'
 import Slider from '@/components/Slider'
-import Resizable from '@/components/Resizable'
+import RunOutputView from './RunOutputView'
 import { codemirror } from 'vue-codemirror'
 import 'codemirror/addon/selection/mark-selection'
 import 'codemirror/mode/python/python'
@@ -327,6 +327,11 @@ export default {
 
       _.defer(this.$refs.slider.layout)
     },
+    toggleRunOutputDisplay () {
+      const runOutputEl = this.$el.querySelector('.run-output')
+      console.log(runOutputEl.style.display)
+      runOutputEl.style.display = runOutputEl.style.display === 'block' ? 'none' : 'block'
+    },
     loadElicast (elicast) {
       // FIXME : `watch` on some parameters are not prepared for load
 
@@ -344,6 +349,6 @@ export default {
   components: {
     codemirror,
     Slider,
-    Resizable
+    RunOutputView
   }
 }

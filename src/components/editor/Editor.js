@@ -2,6 +2,7 @@ import ElicastOT, { ElicastNop, ElicastText, ElicastSelection } from '@/elicast/
 import RecordExerciseSession from './record-exercise-session'
 import RecordSound from './record-sound'
 import Slider from '@/components/Slider'
+import Resizable from '@/components/Resizable'
 import { codemirror } from 'vue-codemirror'
 import 'codemirror/addon/selection/mark-selection'
 import 'codemirror/mode/python/python'
@@ -323,6 +324,7 @@ export default {
 
   components: {
     codemirror,
-    Slider
+    Slider,
+    Resizable
   }
 }

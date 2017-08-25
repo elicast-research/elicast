@@ -129,11 +129,12 @@ export default {
       // prevOtIdx > newOtIdx
       for (let i = prevOtIdx; i > newOtIdx && i >= 0; i--) {
         const ot = this.ots[i]
-        ElicastOT.revertOtToCM(this.cm, this.ots[i])
+        ElicastOT.revertOtToCM(this.cm, ot)
         if (ot instanceof ElicastText && ot._exId) {
           shouldRedrawExerciseAreas = true
         }
       }
+      this.applyLastSelectionOt(ts)
 
       if (shouldRedrawExerciseAreas) {
         ElicastOT.redrawExerciseAreas(this.cm, this.ots.slice(0, newOtIdx + 1))
@@ -191,6 +192,8 @@ export default {
         this.playbackStartTs = this.ts
         this.playbackStartTime = Date.now()
 
+        this.applyLastSelectionOt(this.ts)
+
         const tick = () => {
           this.playbackTick()
           this.playbackTimer = setTimeout(tick, PLAYBACK_TICK)
@@ -233,6 +236,12 @@ export default {
   },
 
   methods: {
+    applyLastSelectionOt (ts) {
+      let selectionOtIdx = _.findLastIndex(this.ots,
+        ot => ts > ot.ts && ot instanceof ElicastSelection)
+      selectionOtIdx = selectionOtIdx < 0 ? this.ots.length - 1 : selectionOtIdx
+      ElicastOT.applyOtToCM(this.cm, this.ots[selectionOtIdx])
+    },
     handleEditorBeforeChange (cm, changeObj) {
       if (!this.playMode.isRecording()) return
 

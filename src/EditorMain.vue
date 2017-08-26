@@ -5,7 +5,10 @@
               @click="showLoadSaveModal">Load/Save</button>
     </div>
     <h5>/* Elicast Editor */</h5>
-    <ElicastEditor ref="elicastEditor"></ElicastEditor>
+    <ElicastEditor v-for="(elicast, idx) in elicasts"
+                   ref="elicastEditor"
+                   :elicast="elicast"
+                   :key="elicast.id"></ElicastEditor>
     <LoadSaveModal ref="loadSaveModal"
                    @elicastLoaded="loadSaveModalElicastLoaded"
                    @elicastSaved="loadSaveModalElicastSaved"></LoadSaveModal>
@@ -23,6 +26,16 @@ const INITIAL_CODE = `def hello(thing):
 
 hello("world")`
 
+const SAMPLE_ELICAST = {
+  id: null,
+  title: 'Sample elicast',
+  ots: [
+    new ElicastText(0, 0, 0, INITIAL_CODE, ''),
+    new ElicastSelection(0, 0, 0)
+  ],
+  recordedBlob: null
+}
+
 export default {
   components: {
     ElicastEditor,
@@ -31,32 +44,26 @@ export default {
 
   data () {
     return {
-      sampleElicast: {
-        id: null,
-        title: 'Sample elicast',
-        ots: [
-          new ElicastText(0, 0, 0, INITIAL_CODE, ''),
-          new ElicastSelection(0, 0, 0)
-        ],
-        recordedBlob: null
-      }
+      elicasts: [SAMPLE_ELICAST]
     }
   },
 
   methods: {
     showLoadSaveModal () {
-      _.defer(() => this.$refs.loadSaveModal.open(this.$refs.elicastEditor.currentElicast))
+      _.defer(() => this.$refs.loadSaveModal.open(
+        this.$refs.elicastEditor.currentElicast))
+    },
+    reloadElicast (elicast) {
+      console.log('Reload elicast', elicast)
+      this.elicasts.pop()
+      this.elicasts.push(elicast)
     },
     loadSaveModalElicastLoaded (elicast) {
-      this.$refs.elicastEditor.loadElicast(elicast)
+      this.reloadElicast(elicast)
     },
     loadSaveModalElicastSaved (elicast) {
-      this.$refs.elicastEditor.loadElicast(elicast)
+      this.reloadElicast(elicast)
     }
-  },
-
-  mounted (t) {
-    this.$refs.elicastEditor.loadElicast(this.sampleElicast)
   }
 }
 </script>

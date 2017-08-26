@@ -41,38 +41,40 @@ const CURSOR_BLINK_RATE = 530 // CodeMirror default cursorBlinkRate: 530ms
 const PLAYBACK_TICK = 1000 / 120
 const RECORD_TICK = 1000 / 10
 
-const INITIAL_COMPONENT_DATA = function () {
-  return {
-    PlayMode,
-    code: '',
-    elicastId: null,
-    elicastTitle: 'Untitiled',
-    ots: [],
-    ts: -1,
-    playMode: PlayMode.STANDBY,
-    playModeReady: true,
-    maxTs: 0,
-    recordStartOt: null,
-    recordExerciseSession: null,
-    recordSound: new RecordSound('audio/webm'),
-    playbackStartTs: -1,
-    playbackStartTime: -1,
-
-    cursorBlinkTimer: -1,
-    recordTimer: -1,
-    playbackTimer: -1
-  }
-}
-
 export default {
+  props: {
+    elicast: {
+      type: Object
+    }
+  },
+
   data () {
-    return INITIAL_COMPONENT_DATA()
+    return {
+      PlayMode,
+
+      code: '',
+      elicastId: this.elicast ? this.elicast.id : null,
+      elicastTitle: this.elicast ? this.elicast.title : 'Untitiled',
+      ots: this.elicast ? this.elicast.ots : [],
+      ts: -1,
+      playMode: PlayMode.STANDBY,
+      playModeReady: true,
+      maxTs: 0,
+      recordStartOt: null,
+      recordExerciseSession: null,
+      recordSound: new RecordSound('audio/webm', this.elicast ? this.elicast.recordedBlob : null),
+      playbackStartTs: -1,
+      playbackStartTime: -1,
+
+      cursorBlinkTimer: -1,
+      recordTimer: -1,
+      playbackTimer: -1,
+
+      cm: null
+    }
   },
 
   computed: {
-    cm () {
-      return this.$refs.cm.editor
-    },
     editorOptions () {
       return Object.assign({
         readOnly: this.playMode.isRecording() ? false : 'nocursor'
@@ -234,6 +236,7 @@ export default {
   mounted (t) {
     this.cursorBlinkTimer = setInterval(this.toggleCursorBlink, CURSOR_BLINK_RATE)
 
+    this.cm = this.$refs.cm.editor
     this.cm.on('mousedown', this.handleEditorMousedown)
 
     this.ts = this.ots.length && this.ots[this.ots.length - 1].ts
@@ -248,6 +251,7 @@ export default {
       let selectionOtIdx = _.findLastIndex(this.ots,
         ot => ts > ot.ts && ot instanceof ElicastSelection)
       selectionOtIdx = selectionOtIdx < 0 ? this.ots.length - 1 : selectionOtIdx
+      if (selectionOtIdx < 0) return
       ElicastOT.applyOtToCM(this.cm, this.ots[selectionOtIdx])
     },
     handleEditorBeforeChange (cm, changeObj) {
@@ -331,18 +335,6 @@ export default {
       const runOutputEl = this.$el.querySelector('.run-output')
       console.log(runOutputEl.style.display)
       runOutputEl.style.display = runOutputEl.style.display === 'block' ? 'none' : 'block'
-    },
-    loadElicast (elicast) {
-      // FIXME : `watch` on some parameters are not prepared for load
-
-      const newData = INITIAL_COMPONENT_DATA()
-      Object.assign(newData, {
-        elicastId: elicast.id,
-        elicastTitle: elicast.title,
-        ots: elicast.ots,
-        recordSound: new RecordSound('audio/webm', elicast.recordedBlob)
-      })
-      Object.assign(this.$data, newData)
     }
   },
 

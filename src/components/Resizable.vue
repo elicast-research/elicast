@@ -13,7 +13,6 @@ export default {
   },
 
   mounted () {
-    console.log(typeof this.$el.querySelector('.resize-handle'))
     this.$el.querySelectorAll('.resize-handle')
       .forEach(e => e.addEventListener('mousedown', this.handleMousedown))
   },

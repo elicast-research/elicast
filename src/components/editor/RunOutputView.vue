@@ -44,13 +44,22 @@ export default {
 
   data: () => {
     return {
-      isMinified: false
+      isMinified: true
+    }
+  },
+
+  watch: {
+    output (output) {
+      this.maximize()
     }
   },
 
   methods: {
     toggleMinify () {
       this.isMinified = !this.isMinified
+    },
+    maximize () {
+      this.isMinified = false
     }
   },
 
@@ -88,7 +97,7 @@ $codeFontFamily: Menlo, Consolas, 'DejaVu Sans Mono', monospace;
   }
 
   .run-output {
-    overflow: scroll;
+    overflow: auto;
     font-size: $outputFontSize;
     font-family: $codeFontFamily;
     line-height: $lineHeight;

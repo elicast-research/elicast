@@ -18,7 +18,9 @@
         <div class="record-controls"
              v-show="playMode.isRecording()">
          <button class="run-code-button btn btn-sm btn-light"
-                 :disabled="!playModeReady">
+                 :disabled="!playModeReady"
+                 @click="runCode"
+                 >
             <i class="fa fa-terminal"></i> Run
           </button>
 
@@ -35,7 +37,7 @@
           </button>
         </div>
 
-        <RunOutputView output="Hello, world!"></RunOutputView>
+        <RunOutputView :output="runOutput"></RunOutputView>
       </div>
     </div>
 
@@ -66,6 +68,7 @@
 <script src="./Editor.js"></script>
 
 <style lang="scss">
+
 $codeFontFamily: Menlo, Consolas, 'DejaVu Sans Mono', monospace;
 
 .elicast-title {

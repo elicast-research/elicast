@@ -126,6 +126,25 @@ export class ElicastExerciseShow extends ElicastOT {
   }
 }
 
+export class ElicastRun extends ElicastOT {
+  static COMMAND = 'run'
+
+  constructor (ts, exitCode, output) {
+    super(ts, ElicastExercise.COMMAND)
+
+    if (!(_.isInteger(exitCode) || _.isNil(exitCode))) throw new Error('Invalid exitCode')
+    if (!(_.isString(output) || _.isNil(output))) throw new Error('Invalid output')
+    if (_.isNil(exitCode) && !_.isNil(output)) throw new Error('Invalid output')
+
+    this.exitCode = exitCode
+    this.output = output
+  }
+
+  static fromJSON (ot) {
+    return new this(ot.exitCode, ot.output)
+  }
+}
+
 /*  This function convert position in `content` to line/ch
  *
  *  Args
@@ -211,6 +230,10 @@ function getAreas (ots, isInExercise = false) {
   return areaSet.toArray()
 }
 
+ElicastOT.getPreviousOtForOtType = function (ots, otType, ts) {
+  return _.findLast(ots, ot => ot.ts < ts && ot.constructor === otType)
+}
+
 /*  This function apply given OT to CodeMirror
  *
  *  Args
@@ -221,47 +244,46 @@ function getAreas (ots, isInExercise = false) {
 ElicastOT.applyOtToCM = function (cm, ot) {
   const cmContent = cm.doc.getValue()
 
-  if (ot.command === 'nop') {
-    return
-  } else if (ot.command === 'selection') {
-    if (cmContent.length < ot.fromPos || cmContent.length < ot.toPos) {
-      throw new Error('The selection is out of range')
-    }
+  switch (ot.constructor) {
+    case ElicastSelection: {
+      if (cmContent.length < ot.fromPos || cmContent.length < ot.toPos) {
+        throw new Error(['The selection is out of range',
+          cmContent.length, ot.fromPos, ot.toPos].join(' '))
+      }
 
-    const fromLineCh = posToLineCh(cmContent, ot.fromPos)
-    const toLineCh = posToLineCh(cmContent, ot.toPos)
-    cm.doc.setSelection(fromLineCh, toLineCh)
-  } else if (ot.command === 'text') {
-    if (cmContent.substring(ot.fromPos, ot.toPos) !== ot.removedText) {
-      throw new Error('The removed text is not matched')
+      const fromLineCh = posToLineCh(cmContent, ot.fromPos)
+      const toLineCh = posToLineCh(cmContent, ot.toPos)
+      cm.doc.setSelection(fromLineCh, toLineCh)
+      break
     }
+    case ElicastText: {
+      if (cmContent.substring(ot.fromPos, ot.toPos) !== ot.removedText) {
+        throw new Error('The removed text is not matched')
+      }
 
-    const fromLineCh = posToLineCh(cmContent, ot.fromPos)
-    const toLineCh = posToLineCh(cmContent, ot.toPos)
-    cm.doc.replaceRange(ot.insertedText, fromLineCh, toLineCh)
-  } else if (ot.command === 'exPlaceholder') {
-    return
-  } else if (ot.command === 'exShow') {
-    return
-  } else {
-    throw new Error('Invalid OT command', ot.command)
+      const fromLineCh = posToLineCh(cmContent, ot.fromPos)
+      const toLineCh = posToLineCh(cmContent, ot.toPos)
+      cm.doc.replaceRange(ot.insertedText, fromLineCh, toLineCh)
+      break
+    }
   }
 }
 
 ElicastOT.revertOtToCM = function (cm, ot) {
   const cmContent = cm.doc.getValue()
 
-  if (ot.command === 'selection') {
-    ElicastOT.applyOtToCM(cm, ot)
-  } else if (ot.command === 'text') {
-    if (cmContent.substring(ot.fromPos, ot.fromPos + ot.insertedText.length) !== ot.insertedText) {
-      throw new Error('The removed text is not matched')
+  switch (ot.constructor) {
+    case ElicastText: {
+      if (cmContent.substring(ot.fromPos, ot.fromPos + ot.insertedText.length) !== ot.insertedText) {
+        throw new Error('The removed text is not matched')
+      }
+
+      const fromLineCh = posToLineCh(cmContent, ot.fromPos)
+      const toLineCh = posToLineCh(cmContent, ot.fromPos + ot.insertedText.length)
+
+      cm.doc.replaceRange(ot.removedText, fromLineCh, toLineCh)
+      break
     }
-
-    const fromLineCh = posToLineCh(cmContent, ot.fromPos)
-    const toLineCh = posToLineCh(cmContent, ot.fromPos + ot.insertedText.length)
-
-    cm.doc.replaceRange(ot.removedText, fromLineCh, toLineCh)
   }
 }
 

@@ -1,4 +1,4 @@
-import ElicastOT, { ElicastNop, ElicastText, ElicastSelection } from '@/elicast/elicast-ot'
+import ElicastOT, { ElicastNop, ElicastText, ElicastSelection, ElicastRun } from '@/elicast/elicast-ot'
 import RecordExerciseSession from './record-exercise-session'
 import RecordSound from './record-sound'
 import Slider from '@/components/Slider'
@@ -7,6 +7,7 @@ import { codemirror } from 'vue-codemirror'
 import 'codemirror/addon/selection/mark-selection'
 import 'codemirror/mode/python/python'
 import _ from 'lodash'
+import axios from 'axios'
 
 class PlayMode {
   static PLAYBACK = new PlayMode('playback')
@@ -63,6 +64,8 @@ export default {
       recordStartOt: null,
       recordExerciseSession: null,
       recordSound: new RecordSound('audio/webm', this.elicast ? this.elicast.recordedBlob : null),
+      runOutput: null,
+      playbackSound: null,
       playbackStartTs: -1,
       playbackStartTime: -1,
 
@@ -127,6 +130,7 @@ export default {
       newOtIdx = (newOtIdx < 0 ? this.ots.length : newOtIdx) - 1
 
       let shouldRedrawExerciseAreas = false
+      let shouldRedrawRunOutput = false
 
       // prevOtIdx < newOtIdx
       for (let i = prevOtIdx + 1; i <= newOtIdx && i < this.ots.length; i++) {
@@ -134,6 +138,8 @@ export default {
         ElicastOT.applyOtToCM(this.cm, ot)
         if (ot instanceof ElicastText && ot._exId) {
           shouldRedrawExerciseAreas = true
+        } else if (ot instanceof ElicastRun) {
+          shouldRedrawRunOutput = true
         }
       }
       // prevOtIdx > newOtIdx
@@ -142,13 +148,23 @@ export default {
         ElicastOT.revertOtToCM(this.cm, ot)
         if (ot instanceof ElicastText && ot._exId) {
           shouldRedrawExerciseAreas = true
+        } else if (ot instanceof ElicastRun) {
+          shouldRedrawRunOutput = true
         }
       }
-      this.applyLastSelectionOt(ts)
 
+      // restore exercise areas
       if (shouldRedrawExerciseAreas) {
         ElicastOT.redrawExerciseAreas(this.cm, this.ots.slice(0, newOtIdx + 1))
       }
+
+      // restore run output
+      if (shouldRedrawRunOutput) {
+        this.redrawRunOutput()
+      }
+
+      // restore selection
+      this.redrawSelection()
 
       if (ts === this.$refs.slider.max) {
         this.playMode = PlayMode.STANDBY
@@ -202,7 +218,8 @@ export default {
         this.playbackStartTs = this.ts
         this.playbackStartTime = Date.now()
 
-        this.applyLastSelectionOt(this.ts)
+        // restore selection
+        this.redrawSelection()
 
         const tick = () => {
           this.playbackTick()
@@ -247,12 +264,32 @@ export default {
   },
 
   methods: {
-    applyLastSelectionOt (ts) {
-      let selectionOtIdx = _.findLastIndex(this.ots,
-        ot => ts > ot.ts && ot instanceof ElicastSelection)
-      selectionOtIdx = selectionOtIdx < 0 ? this.ots.length - 1 : selectionOtIdx
-      if (selectionOtIdx < 0) return
-      ElicastOT.applyOtToCM(this.cm, this.ots[selectionOtIdx])
+    redrawSelection () {
+      const previousSelectionOt = ElicastOT.getPreviousOtForOtType(this.ots, ElicastSelection, this.ts)
+      if (previousSelectionOt) ElicastOT.applyOtToCM(this.cm, previousSelectionOt)
+    },
+    redrawRunOutput (runOt) {
+      runOt = runOt || ElicastOT.getPreviousOtForOtType(this.ots, ElicastRun, this.ts)
+      if (runOt) {
+        this.runOutput = runOt.output || '/* running... */'
+      } else {
+        this.runOutput = ''
+      }
+    },
+    async runCode () {
+      let ts = this.recordStartOt.getRelativeTS()
+      const runStartOT = new ElicastRun(ts)
+      this.ots.push(runStartOT)
+      this.redrawRunOutput(runStartOT)
+
+      const params = new URLSearchParams()
+      params.append('code', this.code)
+      const response = await axios.post('http://anne.pjknkda.com:7822/code/run', params)
+
+      ts = this.recordStartOt.getRelativeTS()
+      const runResultOT = new ElicastRun(ts, response.data.exit_code, response.data.output)
+      this.ots.push(runResultOT)
+      this.redrawRunOutput(runResultOT)
     },
     handleEditorBeforeChange (cm, changeObj) {
       if (!this.playMode.isRecording()) return
@@ -330,11 +367,6 @@ export default {
       this.playModeReady = false
 
       _.defer(this.$refs.slider.layout)
-    },
-    toggleRunOutputDisplay () {
-      const runOutputEl = this.$el.querySelector('.run-output')
-      console.log(runOutputEl.style.display)
-      runOutputEl.style.display = runOutputEl.style.display === 'block' ? 'none' : 'block'
     }
   },
 

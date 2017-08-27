@@ -5,10 +5,7 @@
               @click="showLoadSaveModal">Load/Save</button>
     </div>
     <h5>/* Elicast Editor */</h5>
-    <ElicastEditor v-for="(elicast, idx) in elicasts"
-                   ref="elicastEditor"
-                   :elicast="elicast"
-                   :key="elicast.id"></ElicastEditor>
+    <component ref="editorPlaceholder" :is="currentEditor"></component>
     <LoadSaveModal ref="loadSaveModal"
                    @elicastLoaded="loadSaveModalElicastLoaded"
                    @elicastSaved="loadSaveModalElicastSaved"></LoadSaveModal>
@@ -44,19 +41,37 @@ export default {
 
   data () {
     return {
-      elicasts: [SAMPLE_ELICAST]
+      currentEditor: null
     }
+  },
+
+  mounted (t) {
+    this.reloadElicast(SAMPLE_ELICAST)
   },
 
   methods: {
     showLoadSaveModal () {
-      _.defer(() => this.$refs.loadSaveModal.open(
-        this.$refs.elicastEditor.currentElicast))
+      const currentElicast = this.$refs.editorPlaceholder.getCurrentElicast()
+      _.defer(() => this.$refs.loadSaveModal.open(currentElicast))
     },
-    reloadElicast (elicast) {
-      console.log('Reload elicast', elicast)
-      this.elicasts.pop()
-      this.elicasts.push(elicast)
+    reloadElicast (newElicast) {
+      const newElicastEditor = {
+        data () {
+          return {
+            elicast: newElicast
+          }
+        },
+        methods: {
+          getCurrentElicast () {
+            return this.$refs.elicastEditor.currentElicast
+          }
+        },
+        template: '<ElicastEditor ref="elicastEditor" :elicast="elicast"></ElicastEditor>',
+        components: {
+          ElicastEditor
+        }
+      }
+      this.currentEditor = newElicastEditor
     },
     loadSaveModalElicastLoaded (elicast) {
       this.reloadElicast(elicast)

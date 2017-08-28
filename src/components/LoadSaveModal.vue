@@ -35,20 +35,29 @@ import Modal from 'exports-loader?Modal!bootstrap/js/dist/modal'
 import qs from 'qs'
 import _ from 'lodash'
 
-import { ElicastNop, ElicastText, ElicastSelection, ElicastExercise, ElicastExerciseShow } from '@/elicast/elicast-ot'
+import { ElicastNop, ElicastSelection, ElicastText,
+  ElicastExercise, ElicastExerciseShow, ElicastRun } from '@/elicast/elicast-ot'
 
 const OT_CLASS_MAP = _.keyBy(
   [
     ElicastNop,
-    ElicastText,
     ElicastSelection,
+    ElicastText,
     ElicastExercise,
-    ElicastExerciseShow
+    ElicastExerciseShow,
+    ElicastRun
   ],
   otClass => otClass.COMMAND
 )
 
 export default {
+  props: {
+    enableDelete: {
+      type: Boolean,
+      default: false
+    }
+  },
+
   data () {
     return {
       modalInstance: null,

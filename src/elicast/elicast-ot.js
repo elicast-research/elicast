@@ -130,7 +130,7 @@ export class ElicastRun extends ElicastOT {
   static COMMAND = 'run'
 
   constructor (ts, exitCode, output) {
-    super(ts, ElicastExercise.COMMAND)
+    super(ts, ElicastRun.COMMAND)
 
     if (!(_.isInteger(exitCode) || _.isNil(exitCode))) throw new Error('Invalid exitCode')
     if (!(_.isString(output) || _.isNil(output))) throw new Error('Invalid output')

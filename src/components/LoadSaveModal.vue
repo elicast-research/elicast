@@ -6,20 +6,27 @@
           <h5 class="modal-title">Load/Save</h5>
         </div>
         <div class="modal-body">
+          <div v-show="elicasts == null">Loading...</div>
           <ul class="elicast-list">
             <li class="elicast-item clearfix" v-for="elicast in elicasts">
-              <span class="elicast-item-id">(ID-{{ elicast.id }})</span>
-              <span class="elicast-item-title">{{ elicast.title }}</span>
-              <span class="elicast-item-created">{{ elicast.created | formatTimestamp }}</span>
+              <a class="elicast-item-load" @click="loadElicast(elicast.id)">
+                <span class="elicast-item-id">(ID-{{ elicast.id }})</span>
+                <span class="elicast-item-title">{{ elicast.title }}</span>
+                <span class="elicast-item-created">{{ elicast.created | formatTimestamp }}</span>
+              </a>
               <span class="pull-right">
-                <button class="btn btn-sm btn-link elicast-item-load"
-                        @click="loadElicast(elicast.id)">Load</button>
+                <a class="elicast-item-overwrite" @click="overwriteElicast(elicast)">
+                  <i class="fa fa-floppy-o" title="overwrite"></i>
+                </a>
+                <a class="elicast-item-remove" @click="removeElicast(elicast)">
+                  <i class="fa fa-times" title="remove"></i>
+                </a>
               </span>
             </li>
           </ul>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-primary" @click="saveElicast">Save</button>
+          <button type="button" class="btn btn-primary" @click="saveNewElicast">Save as New</button>
           <button type="button" class="btn btn-secondary" @click="close">Close</button>
         </div>
       </div>
@@ -52,7 +59,7 @@ const OT_CLASS_MAP = _.keyBy(
 
 export default {
   props: {
-    enableDelete: {
+    enableRemoveButton: {
       type: Boolean,
       default: false
     }
@@ -63,7 +70,7 @@ export default {
       modalInstance: null,
       editingElicast: null,
       isShow: false,
-      elicasts: []
+      elicasts: null
     }
   },
 
@@ -91,16 +98,18 @@ export default {
         this.modalInstance.hide()
       }
       this.isShow = false
+      this.elicasts = null
     },
     async open (editingElicast) {
       if (this.modalInstance === null) return
 
       this.editingElicast = editingElicast
 
-      const response = await axios.get('http://anne.pjknkda.com:7822/elicast')
-      this.elicasts = response.data.elicasts
       this.isShow = true
       this.modalInstance.show()
+
+      const response = await axios.get('http://anne.pjknkda.com:7822/elicast')
+      this.elicasts = response.data.elicasts
     },
     async loadElicast (elicastId) {
       const response = await axios.get('http://anne.pjknkda.com:7822/elicast/' + elicastId)
@@ -117,17 +126,44 @@ export default {
       this.$emit('elicastLoaded', elicast)
       this.close()
     },
-    async saveElicast () {
+    async removeElicast (elicast) {
+      if (!confirm('Do you really want to remove [' + elicast.title + ']?')) {
+        return
+      }
+
+      await axios.delete('http://anne.pjknkda.com:7822/elicast/' + elicast.id)
+
+      // refresh the list
+      const response = await axios.get('http://anne.pjknkda.com:7822/elicast')
+      this.elicasts = response.data.elicasts
+    },
+    async overwriteElicast (elicast) {
+      const newElicast = this.editingElicast
+
+      if (!confirm('Do you really want to overwrite [' +
+          elicast.title + '] with [' + newElicast.title + ']?')) {
+        return
+      }
+
+      await axios.post('http://anne.pjknkda.com:7822/elicast/' + elicast.id,
+        qs.stringify({
+          title: newElicast.title,
+          ots: JSON.stringify(newElicast.ots),
+          voice_blob: newElicast.recordedBlob === null
+            ? '' : await blobUtil.blobToDataURL(newElicast.recordedBlob)
+        }))
+
+      await this.loadElicast(elicast.id)
+    },
+    async saveNewElicast () {
       const elicast = this.editingElicast
-      const response = await axios({
-        method: elicast.id === null ? 'put' : 'post',
-        url: 'http://anne.pjknkda.com:7822/elicast' + (elicast.id === null ? '' : '/' + elicast.id),
-        data: qs.stringify({
+      const response = await axios.put('http://anne.pjknkda.com:7822/elicast',
+        qs.stringify({
           title: elicast.title,
           ots: JSON.stringify(elicast.ots),
-          voice_blob: elicast.recordedBlob === null ? '' : await blobUtil.blobToDataURL(elicast.recordedBlob)
-        })
-      })
+          voice_blob: elicast.recordedBlob === null
+            ? '' : await blobUtil.blobToDataURL(elicast.recordedBlob)
+        }))
 
       elicast.id = response.data.elicast.id
       this.$emit('elicastSaved', elicast)
@@ -154,13 +190,21 @@ export default {
   margin: 1rem;
 }
 
-// .elicast-item button {
-//   display: none;
-// }
-//
-// .elicast-item:hover button {
-//   display: inline-block;
-// }
+.elicast-item a {
+  cursor: pointer;
+}
+
+.elicast-item .elicast-item-load:hover {
+  color: #007bff;
+}
+
+.elicast-item .elicast-item-overwrite {
+  color: #868e96;
+}
+
+.elicast-item .elicast-item-remove {
+  color: #868e96;
+}
 
 .elicast-item-id {
   color: grey;
@@ -174,7 +218,7 @@ export default {
   font-size: small;
 }
 
-.elicast-item-load, .elicast-item-overwrite {
+.modal-footer button {
   cursor: pointer;
 }
 </style>

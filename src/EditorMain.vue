@@ -7,6 +7,7 @@
     <h5>/* Elicast Editor */</h5>
     <component ref="editorPlaceholder" :is="currentEditor"></component>
     <LoadSaveModal ref="loadSaveModal"
+                   :enableRemoveButton="true"
                    @elicastLoaded="loadSaveModalElicastLoaded"
                    @elicastSaved="loadSaveModalElicastSaved"></LoadSaveModal>
   </div>

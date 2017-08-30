@@ -65,7 +65,7 @@ export default {
       maxTs: 0,
       recordStartOt: null,
       recordExerciseSession: null,
-      recordSound: new RecordSound('audio/webm', this.elicast ? this.elicast.recordedBlob : null),
+      recordSound: new RecordSound('audio/webm', this.elicast ? this.elicast.voiceBlob : null),
       runOutput: null,
       playbackSound: null,
       playbackStartTs: -1,

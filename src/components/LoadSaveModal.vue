@@ -119,8 +119,7 @@ export default {
       const elicast = new Elicast(
         elicastRaw.id,
         elicastRaw.title,
-        elicastRaw.ots.map(
-          otRaw => OT_CLASS_MAP[otRaw.command].fromJSON(otRaw)),
+        elicastRaw.ots.map(otRaw => OT_CLASS_MAP[otRaw.command].fromJSON(otRaw)),
         elicastRaw.voice_blob === '' ? null : await blobUtil.dataURLToBlob(elicastRaw.voice_blob)
       )
 
@@ -150,8 +149,7 @@ export default {
         qs.stringify({
           title: newElicast.title,
           ots: JSON.stringify(newElicast.ots),
-          voice_blob: newElicast.recordedBlob === null
-            ? '' : await blobUtil.blobToDataURL(newElicast.recordedBlob)
+          voice_blob: newElicast.voiceBlob ? await blobUtil.blobToDataURL(newElicast.voiceBlob) : ''
         }))
 
       await this.loadElicast(elicast.id)
@@ -162,8 +160,7 @@ export default {
         qs.stringify({
           title: elicast.title,
           ots: JSON.stringify(elicast.ots),
-          voice_blob: elicast.recordedBlob === null
-            ? '' : await blobUtil.blobToDataURL(elicast.recordedBlob)
+          voice_blob: elicast.voiceBlob ? await blobUtil.blobToDataURL(elicast.voiceBlob) : ''
         }))
 
       elicast.id = response.data.elicast.id

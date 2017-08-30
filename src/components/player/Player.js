@@ -136,9 +136,9 @@ export default {
         // start playback
         if (this.playbackTimer !== -1) throw new Error('playbackTimer is not cleared')
 
-        this.playbackSound = await this.recordSound.load()
-        this.playbackSound.seek(this.ts / 1000)
-        this.playbackSound.play()
+        // this.playbackSound = await this.recordSound.load()
+        // this.playbackSound.seek(this.ts / 1000)
+        // this.playbackSound.play()
 
         this.playbackStartTs = this.ts
         this.playbackStartTime = Date.now()
@@ -154,7 +154,7 @@ export default {
       } else if (prevPlayMode === PlayMode.PLAYBACK) {
         // pause playback
 
-        this.playbackSound.stop()
+        // this.playbackSound.stop()
         this.playbackSound = null
 
         this.playbackStartTs = -1
@@ -167,7 +167,7 @@ export default {
       // Give focus to the editor if new playMode is SOLVE_EXERCISE state,
       // otherwise give focus to the control button
       _.defer(() => {
-        if (playMode.isRecording()) this.cm.focus()
+        if (playMode === PlayMode.SOLVE_EXERCISE) this.cm.focus()
         else this.$refs.controlButton.focus()
       })
 
@@ -181,7 +181,7 @@ export default {
     this.cm = this.$refs.cm.editor
     this.cm.on('mousedown', this.handleEditorMousedown)
 
-    this.ts = 0
+    this.maxTs = this.ots.length && this.ots[this.ots.length - 1].ts
   },
 
   beforeDestroy () {
@@ -202,18 +202,11 @@ export default {
       }
     },
     async runCode () {
-      let ts = this.recordStartOt.getRelativeTS()
-      const runStartOT = new ElicastRun(ts)
-      this.ots.push(runStartOT)
-      this.redrawRunOutput(runStartOT)
-
       const response = await axios.post('http://anne.pjknkda.com:7822/code/run', qs.stringify({
         code: this.code
       }))
 
-      ts = this.recordStartOt.getRelativeTS()
-      const runResultOT = new ElicastRun(ts, response.data.exit_code, response.data.output)
-      this.ots.push(runResultOT)
+      const runResultOT = new ElicastRun(0, response.data.exit_code, response.data.output)
       this.redrawRunOutput(runResultOT)
     },
     handleEditorMousedown (event) {
@@ -238,13 +231,13 @@ export default {
 
       const toggleState = {
         [PlayMode.PLAYBACK]: PlayMode.PAUSE,
-        [PlayMode.PAUSE]: PlayMode.PLAYBACK,
+        [PlayMode.PAUSE]: PlayMode.PLAYBACK
       }
       this.playMode = toggleState[this.playMode]
       this.playModeReady = false
 
       _.defer(this.$refs.slider.layout)
-    },
+    }
 
   },
 

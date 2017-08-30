@@ -41,8 +41,9 @@
       <Slider ref="slider"
               class="slider"
               @change="handleSliderChange"
-              :color="sliderColor"
+              :max="maxTs"
               :disabled="playMode === PlayMode.SOLVE_EXERCISE"></Slider>
+              <!-- :color="sliderColor" -->
 
       <div class="ts-display text-secondary">
         {{ tsDisplay }}
@@ -88,13 +89,7 @@
   button {
     cursor: pointer;
 
-    background-color: transparentize(red, .925);
-    border-color: transparent;
-
-    &:hover {
-      background-color: transparentize(red, 0.85);
-      border-color: transparentize(red, 0.85);
-    }
+    border: 1px solid rgba(0, 0, 0, 0.125);
   }
 }
 

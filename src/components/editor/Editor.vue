@@ -55,6 +55,7 @@
               class="slider"
               @change="handleSliderChange"
               :color="sliderColor"
+              :max="maxTs"
               :disabled="playMode.isRecording()"></Slider>
 
       <div class="ts-display text-secondary">

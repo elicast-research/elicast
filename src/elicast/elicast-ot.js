@@ -25,6 +25,10 @@ export default class ElicastOT {
     this.ts = ts
     this.command = command
   }
+
+  static fromJSON (otRaw) {
+    return OT_CLASS_MAP[otRaw.command].fromJSON(otRaw)
+  }
 }
 
 export class ElicastNop extends ElicastOT {
@@ -144,6 +148,15 @@ export class ElicastRun extends ElicastOT {
     return new this(ot.ts, ot.exitCode, ot.output)
   }
 }
+
+const OT_CLASS_MAP = _.keyBy([
+  ElicastNop,
+  ElicastSelection,
+  ElicastText,
+  ElicastExercise,
+  ElicastExerciseShow,
+  ElicastRun
+], otClass => otClass.COMMAND)
 
 /*  This function convert position in `content` to line/ch
  *

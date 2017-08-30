@@ -20,6 +20,14 @@ const DISABLED_ALPHA = 0.5
 
 export default {
   props: {
+    min: {
+      type: Number,
+      default: 0
+    },
+    max: {
+      type: Number,
+      default: 0
+    },
     disabled: {
       type: Boolean,
       default: false
@@ -35,8 +43,6 @@ export default {
       width: 0, // resized
       height: 10,
 
-      min: 0,
-      max: 0,
       val: 0
     }
   },

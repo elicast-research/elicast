@@ -11,6 +11,11 @@
 
 <script>
 import ElicastPlayer from '@/components/Player'
+import Elicast from '@/elicast/elicast'
+import ElicastOT from '@/elicast/elicast-ot'
+import sampleOts from '@/sample-ots'
+
+const SAMPLE_ELICAST = new Elicast(1, 'Sample elicast', sampleOts.map(ElicastOT.fromJSON), null)
 
 export default {
   components: {
@@ -24,7 +29,7 @@ export default {
   },
 
   mounted (t) {
-    this.reloadElicast()
+    this.reloadElicast(SAMPLE_ELICAST)
   },
 
   methods: {
@@ -55,8 +60,18 @@ export default {
 
 <style lang="scss">
 
-h1 {
+h5 {
   margin-top: 1.5rem;
 }
+
+.top-controls {
+  float: right;
+  padding-bottom: 0.1rem;
+
+  button {
+    cursor: pointer;
+  }
+}
+
 
 </style>

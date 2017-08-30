@@ -35,28 +35,14 @@
 </template>
 
 <script>
-import Elicast from '@/elicast/Elicast'
+import Elicast from '@/elicast/elicast'
 import axios from 'axios'
 import blobUtil from 'blob-util'
 import moment from 'moment'
 import Modal from 'exports-loader?Modal!bootstrap/js/dist/modal'
 import qs from 'qs'
-import _ from 'lodash'
 
-import { ElicastNop, ElicastSelection, ElicastText,
-  ElicastExercise, ElicastExerciseShow, ElicastRun } from '@/elicast/elicast-ot'
-
-const OT_CLASS_MAP = _.keyBy(
-  [
-    ElicastNop,
-    ElicastSelection,
-    ElicastText,
-    ElicastExercise,
-    ElicastExerciseShow,
-    ElicastRun
-  ],
-  otClass => otClass.COMMAND
-)
+import ElicastOT from '@/elicast/elicast-ot'
 
 export default {
   props: {
@@ -119,7 +105,7 @@ export default {
       const elicast = new Elicast(
         elicastRaw.id,
         elicastRaw.title,
-        elicastRaw.ots.map(otRaw => OT_CLASS_MAP[otRaw.command].fromJSON(otRaw)),
+        elicastRaw.ots.map(ElicastOT.fromJSON),
         elicastRaw.voice_blob === '' ? null : await blobUtil.dataURLToBlob(elicastRaw.voice_blob)
       )
 

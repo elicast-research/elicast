@@ -1,5 +1,5 @@
 import ElicastOT, { ElicastNop, ElicastSelection, ElicastText, ElicastRun } from '@/elicast/elicast-ot'
-import Elicast from '@/elicast/Elicast'
+import Elicast from '@/elicast/elicast'
 import RecordExerciseSession from './record-exercise-session'
 import RecordSound from './record-sound'
 import Slider from '@/components/Slider'
@@ -115,7 +115,6 @@ export default {
     ts (ts, prevTs) {
       if (ts > this.maxTs) {
         this.maxTs = ts
-        this.$refs.slider.max = ts
       }
       this.$refs.slider.val = ts
 

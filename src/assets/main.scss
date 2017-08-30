@@ -2,3 +2,68 @@
 
 $fa-font-path: "~font-awesome/fonts";
 @import "~font-awesome/scss/font-awesome";
+
+$codeFontFamily: Menlo, Consolas, 'DejaVu Sans Mono', monospace;
+
+.code-wrap {
+  position: relative;
+  border: 1px solid #eee;
+  overflow: hidden;
+  margin-top: 1rem;
+
+  .code-right-pane {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 100;
+    max-width: percentage(1 - 0.618);
+    max-height: 100%;
+
+    & > * {
+      margin: .5rem;
+    }
+  }
+}
+
+.CodeMirror {
+  $exerciseBackgroundColor: transparentize(#E1BEE7, 0.5);
+
+  font-family: $codeFontFamily;
+
+  .exercise-block {
+    padding: .15em 0;
+    border-radius: .1em;
+    background-color: $exerciseBackgroundColor;
+    cursor: pointer;
+  }
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 0;
+
+  & > * {
+    margin: 0 0.25rem;
+
+    &:first-child, &:last-child {
+      margin: 0;
+    }
+  }
+
+  button {
+    width: 2.5em;
+    text-align: center;
+    cursor: pointer;
+  }
+
+  .slider {
+    flex: auto;
+  }
+
+  .ts-display {
+    width: 2rem;
+    text-align: center;
+    font-size: 0.7rem;
+  }
+}

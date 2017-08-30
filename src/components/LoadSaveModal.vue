@@ -35,6 +35,7 @@
 </template>
 
 <script>
+import Elicast from '@/elicast/Elicast'
 import axios from 'axios'
 import blobUtil from 'blob-util'
 import moment from 'moment'
@@ -115,13 +116,13 @@ export default {
       const response = await axios.get('http://anne.pjknkda.com:7822/elicast/' + elicastId)
       const elicastRaw = response.data.elicast
 
-      const elicast = {
-        id: elicastRaw.id,
-        title: elicastRaw.title,
-        ots: elicastRaw.ots.map(
+      const elicast = new Elicast(
+        elicastRaw.id,
+        elicastRaw.title,
+        elicastRaw.ots.map(
           otRaw => OT_CLASS_MAP[otRaw.command].fromJSON(otRaw)),
-        recordedBlob: elicastRaw.voice_blob === '' ? null : await blobUtil.dataURLToBlob(elicastRaw.voice_blob)
-      }
+        elicastRaw.voice_blob === '' ? null : await blobUtil.dataURLToBlob(elicastRaw.voice_blob)
+      )
 
       this.$emit('elicastLoaded', elicast)
       this.close()

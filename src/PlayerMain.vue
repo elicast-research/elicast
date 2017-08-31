@@ -1,25 +1,44 @@
 <template>
   <div class="container">
     <div class="top-controls">
-      <!-- <button class="btn btn-sm btn-light"
-              @click="showLoadSaveModal">Load/Save</button> -->
+      <button class="btn btn-sm btn-light"
+              @click="showLoadSaveModal">Load/Save</button>
     </div>
     <h5>/* Elicast */</h5>
     <component ref="playerPlaceholder" :is="currentPlayer"></component>
+    <LoadSaveModal ref="loadSaveModal"
+                   :enableRemoveButton="true"
+                   @elicastLoaded="loadSaveModalElicastLoaded"></LoadSaveModal>
   </div>
 </template>
 
 <script>
 import ElicastPlayer from '@/components/Player'
-import Elicast from '@/elicast/elicast'
-import ElicastOT from '@/elicast/elicast-ot'
-import sampleOts from '@/sample-ots'
+// import Elicast from '@/elicast/elicast'
+import LoadSaveModal from '@/components/LoadSaveModal'
+import _ from 'lodash'
 
-const SAMPLE_ELICAST = new Elicast(1, 'Sample elicast', sampleOts.map(ElicastOT.fromJSON), null)
+function newElicastPlayer (elicast) {
+  return {
+    data () {
+      return { elicast }
+    },
+    methods: {
+      getCurrentElicast () {
+        return this.$refs.elicastPlayer.currentElicast
+      }
+    },
+    template: '<ElicastPlayer ref="elicastPlayer" :elicast="elicast"></ElicastPlayer>',
+    components: {
+      ElicastPlayer
+    }
+  }
+}
 
 export default {
   components: {
-    ElicastPlayer
+    ElicastPlayer,
+    LoadSaveModal
   },
 
   data () {
@@ -29,30 +48,18 @@ export default {
   },
 
   mounted (t) {
-    this.reloadElicast(SAMPLE_ELICAST)
+    this.showLoadSaveModal()
   },
 
   methods: {
+    showLoadSaveModal () {
+      _.defer(() => this.$refs.loadSaveModal.open())
+    },
     reloadElicast (newElicast) {
-      const newElicastPlayer = {
-        data () {
-          return {
-            elicast: newElicast
-          }
-        },
-
-        methods: {
-          getCurrentElicast () {
-            return this.$refs.elicastPlayer.currentElicast
-          }
-        },
-
-        template: '<ElicastPlayer ref="elicastPlayer" :elicast="elicast"></ElicastPlayer>',
-        components: {
-          ElicastPlayer
-        }
-      }
-      this.currentPlayer = newElicastPlayer
+      this.currentPlayer = newElicastPlayer(newElicast)
+    },
+    loadSaveModalElicastLoaded (elicast) {
+      this.reloadElicast(elicast)
     }
   }
 }

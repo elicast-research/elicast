@@ -7,6 +7,8 @@ import 'codemirror/mode/python/python'
 import _ from 'lodash'
 import axios from 'axios'
 import qs from 'qs'
+import { Howl } from 'howler'
+import moment from 'moment'
 
 class PlayMode {
   static PLAYBACK = new PlayMode('playback')
@@ -37,7 +39,8 @@ const PLAYBACK_TICK = 1000 / 120
 export default {
   props: {
     elicast: {
-      type: Object
+      type: Object,
+      required: true
     }
   },
 
@@ -46,15 +49,15 @@ export default {
       PlayMode,
 
       code: '',
-      elicastId: this.elicast ? this.elicast.id : null,
-      elicastTitle: this.elicast ? this.elicast.title : 'Untitiled',
-      ots: this.elicast ? this.elicast.ots : [],
+      elicastId: this.elicast.id,
+      elicastTitle: this.elicast.title,
+      ots: this.elicast.ots,
       ts: -1,
       playMode: PlayMode.PAUSE,
       playModeReady: true,
       maxTs: 0,
       runOutput: null,
-      playbackSound: null,
+      playbackSound: new Howl({ src: [URL.createObjectURL(this.elicast.voiceBlob)], format: ['webm'] }),
       playbackStartTs: -1,
       playbackStartTime: -1,
 
@@ -71,7 +74,7 @@ export default {
     },
 
     tsDisplay () {
-      // TODO use moment.js
+      return moment(this.ts).format('m:ss') + '/' + moment(this.maxTs).format('m:ss')
     }
   },
 
@@ -113,6 +116,10 @@ export default {
         }
       }
 
+      // if playMode is not playback, always redraw when ts changes
+      shouldRedrawExerciseAreas = shouldRedrawExerciseAreas || this.playMode !== PlayMode.PLAYBACK
+      shouldRedrawRunOutput = shouldRedrawRunOutput || this.playMode !== PlayMode.PLAYBACK
+
       // restore exercise areas
       if (shouldRedrawExerciseAreas) {
         ElicastOT.redrawExerciseAreas(this.cm, this.ots.slice(0, newOtIdx + 1))
@@ -136,15 +143,17 @@ export default {
         // start playback
         if (this.playbackTimer !== -1) throw new Error('playbackTimer is not cleared')
 
-        // this.playbackSound = await this.recordSound.load()
-        // this.playbackSound.seek(this.ts / 1000)
-        // this.playbackSound.play()
+        this.playbackSound.seek(this.ts / 1000)
+        this.playbackSound.play()
 
         this.playbackStartTs = this.ts
         this.playbackStartTime = Date.now()
 
         // restore selection
         this.redrawSelection()
+
+        // restore run output
+        this.redrawRunOutput()
 
         const tick = () => {
           this.playbackTick()
@@ -154,8 +163,7 @@ export default {
       } else if (prevPlayMode === PlayMode.PLAYBACK) {
         // pause playback
 
-        // this.playbackSound.stop()
-        this.playbackSound = null
+        this.playbackSound.stop()
 
         this.playbackStartTs = -1
         this.playStartTime = -1
@@ -182,6 +190,7 @@ export default {
     this.cm.on('mousedown', this.handleEditorMousedown)
 
     this.maxTs = this.ots.length && this.ots[this.ots.length - 1].ts
+    this.ts = 0
   },
 
   beforeDestroy () {

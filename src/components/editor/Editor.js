@@ -151,6 +151,10 @@ export default {
         }
       }
 
+      // if playMode is not playback, always redraw when ts changes
+      shouldRedrawExerciseAreas = shouldRedrawExerciseAreas || this.playMode !== PlayMode.PLAYBACK
+      shouldRedrawRunOutput = shouldRedrawRunOutput || this.playMode !== PlayMode.PLAYBACK
+
       // restore exercise areas
       if (shouldRedrawExerciseAreas) {
         ElicastOT.redrawExerciseAreas(this.cm, this.ots.slice(0, newOtIdx + 1))
@@ -218,6 +222,9 @@ export default {
 
         // restore selection
         this.redrawSelection()
+
+        // restore run output
+        this.redrawRunOutput()
 
         const tick = () => {
           this.playbackTick()

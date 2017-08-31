@@ -14,7 +14,7 @@
                 <span class="elicast-item-title">{{ elicast.title }}</span>
                 <span class="elicast-item-created">{{ elicast.created | formatTimestamp }}</span>
               </a>
-              <span class="pull-right elicast-item-extra-menu">
+              <span v-show="editingElicast != null" class="pull-right elicast-item-extra-menu">
                 <a class="elicast-item-overwrite" @click="overwriteElicast(elicast)">
                   <i class="fa fa-floppy-o" title="overwrite"></i>
                 </a>
@@ -26,8 +26,13 @@
           </ul>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-primary" @click="saveNewElicast">Save as New</button>
-          <button type="button" class="btn btn-secondary" @click="close">Close</button>
+          <button v-show="editingElicast != null"
+                  type="button"
+                  class="btn btn-primary"
+                  @click="saveNewElicast">Save as New</button>
+          <button type="button"
+                  class="btn btn-secondary"
+                  @click="close">Close</button>
         </div>
       </div>
     </div>

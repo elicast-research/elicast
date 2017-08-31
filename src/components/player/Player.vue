@@ -2,17 +2,16 @@
   <div id="player">
     <div>
       <span v-show="elicastId !== null">(ID-{{ elicastId }})</span>
-      <input class="elicast-title" v-model.trim="elicastTitle">
+      <span class="elicast-title">{{ elicastTitle }}</span>
     </div>
 
     <div class="code-wrap">
       <codemirror ref="cm"
                   v-model="code"
                   :class="{ 'solve-exercise': playMode === PlayMode.SOLVE_EXERCISE }"
-                  :options="editorOptions">
-                  <!-- @beforeChange="handleEditorBeforeChange"
-                  @change="handleEditorChange"
-                  @cursorActivity="handleEditorCursorActivity"> -->
+                  :options="editorOptions"
+                  @beforeChange="handleEditorBeforeChange"
+                  @cursorActivity="handleEditorCursorActivity">
       </codemirror>
 
       <div class="code-right-pane">
@@ -34,8 +33,9 @@
               class="btn btn-sm btn-light"
               @click="togglePlayMode"
               :disabled="playMode === PlayMode.SOLVE_EXERCISE || !playModeReady">
-        <i v-show="playMode === PlayMode.PAUSE" class="fa fa-play"></i>
+        <i v-show="playMode === PlayMode.PAUSE && ts !== maxTs" class="fa fa-play"></i>
         <i v-show="playMode === PlayMode.PLAYBACK" class="fa fa-pause"></i>
+        <i v-show="playMode === PlayMode.PAUSE && ts === maxTs" class="fa fa-repeat"></i>
       </button>
 
       <Slider ref="slider"
@@ -43,7 +43,6 @@
               @change="handleSliderChange"
               :max="maxTs"
               :disabled="playMode === PlayMode.SOLVE_EXERCISE"></Slider>
-              <!-- :color="sliderColor" -->
 
       <div class="ts-display text-secondary">
         {{ tsDisplay }}
@@ -105,6 +104,10 @@
     border-radius: .2em;
     background-color: white;
   }
+}
+
+.ts-display {
+  width: 3.4rem;
 }
 
 </style>

@@ -14,7 +14,7 @@
                 <span class="elicast-item-title">{{ elicast.title }}</span>
                 <span class="elicast-item-created">{{ elicast.created | formatTimestamp }}</span>
               </a>
-              <span class="pull-right">
+              <span class="pull-right elicast-item-extra-menu">
                 <a class="elicast-item-overwrite" @click="overwriteElicast(elicast)">
                   <i class="fa fa-floppy-o" title="overwrite"></i>
                 </a>
@@ -176,6 +176,14 @@ export default {
 
 .elicast-item a {
   cursor: pointer;
+}
+
+.elicast-item .elicast-item-extra-menu {
+  display: none;
+}
+
+.elicast-item:hover .elicast-item-extra-menu {
+  display: inline-block;
 }
 
 .elicast-item .elicast-item-load:hover {

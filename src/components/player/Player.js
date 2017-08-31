@@ -143,17 +143,28 @@ export default {
         // start playback
         if (this.playbackTimer !== -1) throw new Error('playbackTimer is not cleared')
 
+        if (this.ts === this.maxTs) {
+          // replay from the beginning
+          this.ts = 0
+        } else {
+          // restore code
+          this.cm.doc.setValue('')
+          let newOtIdx = this.ots.findIndex(ot => this.ts < ot.ts)
+          newOtIdx = (newOtIdx < 0 ? this.ots.length : newOtIdx) - 1
+          for (let i = 0; i <= newOtIdx; i++) {
+            ElicastOT.applyOtToCM(this.cm, this.ots[i])
+          }
+          // restore selection
+          this.redrawSelection()
+          // restore run output
+          this.redrawRunOutput()
+        }
+
         this.playbackSound.seek(this.ts / 1000)
         this.playbackSound.play()
 
         this.playbackStartTs = this.ts
         this.playbackStartTime = Date.now()
-
-        // restore selection
-        this.redrawSelection()
-
-        // restore run output
-        this.redrawRunOutput()
 
         const tick = () => {
           this.playbackTick()
@@ -162,7 +173,6 @@ export default {
         this.playbackTimer = setTimeout(tick, PLAYBACK_TICK)
       } else if (prevPlayMode === PlayMode.PLAYBACK) {
         // pause playback
-
         this.playbackSound.stop()
 
         this.playbackStartTs = -1
@@ -234,6 +244,10 @@ export default {
         this.playMode = PlayMode.PAUSE
       }
       this.ts = nextTs
+    },
+    toggleCursorBlink () {
+      const cmCursor = this.$el.querySelector('.CodeMirror-cursors')
+      cmCursor.style.visibility = cmCursor.style.visibility === 'visible' ? 'hidden' : 'visible'
     },
     togglePlayMode () {
       if (!this.playModeReady) return

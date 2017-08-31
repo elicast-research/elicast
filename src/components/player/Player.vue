@@ -9,9 +9,7 @@
       <codemirror ref="cm"
                   v-model="code"
                   :class="{ 'solve-exercise': playMode === PlayMode.SOLVE_EXERCISE }"
-                  :options="editorOptions"
-                  @beforeChange="handleEditorBeforeChange"
-                  @cursorActivity="handleEditorCursorActivity">
+                  :options="editorOptions">
       </codemirror>
 
       <div class="code-right-pane">

@@ -27,7 +27,6 @@ export default {
         const elRect = this.$el.getBoundingClientRect()
         this.isHandleTop = e.clientY < (elRect.top + elRect.bottom) / 2
         this.isHandleLeft = e.clientX < (elRect.left + elRect.right) / 2
-        console.log(elRect.left, e.clientX, elRect.top, e.clientY)
 
         this.startClientX = e.clientX
         this.startClientY = e.clientY

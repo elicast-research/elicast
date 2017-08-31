@@ -213,18 +213,17 @@ export default {
         // start playback
         if (this.playbackTimer !== -1) throw new Error('playbackTimer is not cleared')
 
+        // restore selection
+        this.redrawSelection()
+        // restore run output
+        this.redrawRunOutput()
+
         this.playbackSound = await this.recordSound.load()
         this.playbackSound.seek(this.ts / 1000)
         this.playbackSound.play()
 
         this.playbackStartTs = this.ts
         this.playbackStartTime = Date.now()
-
-        // restore selection
-        this.redrawSelection()
-
-        // restore run output
-        this.redrawRunOutput()
 
         const tick = () => {
           this.playbackTick()

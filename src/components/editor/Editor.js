@@ -335,7 +335,6 @@ export default {
       const runResultOT = new ElicastRun(ts, response.data.exit_code, response.data.output)
       this.ots.push(runResultOT)
       this.redrawRunOutput(runResultOT)
-      return runResultOT.exitCode
     },
     cutOts () {
       const firstCutOtIdx = this.ots.findIndex(ot => this.ts < ot.ts)
@@ -350,6 +349,15 @@ export default {
 
       this.ots.push(new ElicastNop(this.ts + 1))  // Trick to invoke ts update
       this.ts += 1
+    },
+    async evaluateAssertion () {
+      this.runOutput = '/* running... */'
+      const response = await axios.post('http://anne.pjknkda.com:7822/code/run', qs.stringify({
+        code: this.code
+      }))
+      this.runOutput = response.data.output
+
+      return response.data.exit_code === 0
     },
     handleEditorBeforeChange (cm, changeObj) {
       if (!this.playMode.isRecording()) return
@@ -419,9 +427,16 @@ export default {
 
       _.defer(this.$refs.slider.layout)
     },
-    toggleRecordExercise () {
+    async toggleRecordExercise () {
       if (!this.playModeReady) return
 
+      if (this.playMode === PlayMode.RECORD_EXERCISE) {
+        let isPassed = await this.evaluateAssertion()
+        if (!isPassed) {
+          alert('Assertion Failed.')
+          return
+        }
+      }
       const toggleState = {
         [PlayMode.RECORD]: PlayMode.RECORD_EXERCISE,
         [PlayMode.RECORD_EXERCISE]: PlayMode.RECORD
@@ -434,12 +449,10 @@ export default {
     async toggleRecordAssert () {
       if (!this.playModeReady) return
 
-      if (this.playMode === PlayMode.ASSERT) {
-        let exitCode = await this.runCode()
-        if (exitCode !== 0) {
-          alert('Assertion Failed.')
-          return
-        }
+      let isPassed = await this.evaluateAssertion()
+      if (!isPassed) {
+        alert('Assertion Failed.')
+        return
       }
 
       const toggleState = {

@@ -175,6 +175,7 @@ const OT_CLASS_MAP = _.keyBy([
   ElicastText,
   ElicastExercise,
   ElicastExerciseShow,
+  ElicastAssert,
   ElicastRun
 ], otClass => otClass.COMMAND)
 

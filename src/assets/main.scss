@@ -40,7 +40,7 @@ $codeFontFamily: Menlo, Consolas, 'DejaVu Sans Mono', monospace;
 
   .assert-block {
     padding: .15em 0;
-    border-radius: .1em;
+    border-radius: 0;
     background-color: $assertBackgroundColor;
     cursor: pointer;
   }

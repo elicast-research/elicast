@@ -6,7 +6,8 @@
     <div class="code-wrap">
       <codemirror ref="cm"
                   v-model="code"
-                  :class="{ 'recording-assert': recordAssertInitiated }"
+                  :class="{ 'recording-exercise': recordExerciseInitiated,
+                    'recording-assert': recordAssertInitiated }"
                   :options="editorOptions"
                   @beforeChange="handleEditorBeforeChange"
                   @change="handleEditorChange"
@@ -45,6 +46,8 @@
             </button>
 
             <button class="btn btn-sm btn-light"
+                    v-show="playMode === PlayMode.RECORD ||
+                         playMode === PlayMode.RECORD_EXERCISE"
                     @click="toggleRecordExercise"
                     :disabled="!playModeReady">
               <span v-show="playMode === PlayMode.RECORD">

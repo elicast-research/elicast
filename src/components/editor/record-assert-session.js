@@ -2,10 +2,11 @@ import { ElicastText, ElicastAssert } from '@/elicast/elicast-ot'
 import _ from 'lodash'
 
 function markAssertOTs (recordAssertSession) {
-  let assertStartIndex = recordAssertSession.ots.findIndex(ot => ot instanceof ElicastAssert)
+  let assertStartIndex = _.findLastIndex(recordAssertSession.ots,
+    ot => ot instanceof ElicastAssert)
 
   for (let i = assertStartIndex + 1; i < recordAssertSession.ots.length; i++) {
-    if (recordAssertSession.ots[i] instanceof ElicastAssert) break
+    if (recordAssertSession.ots[i] instanceof ElicastAssert) throw new Error('Invalid assert ot')
     recordAssertSession.ots[i]._assert = true
   }
 }
@@ -24,9 +25,9 @@ export default class RecordAssertSession {
   }
 
   finishRecording (ts) {
+    markAssertOTs(this)
     const newOt = new ElicastAssert(ts)
     this.ots.push(newOt)
-    markAssertOTs(this)
   }
 
   /**

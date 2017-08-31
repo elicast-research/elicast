@@ -168,7 +168,7 @@ export default {
       // restore selection
       this.redrawSelection()
 
-      if (ts === this.$refs.slider.max) {
+      if (ts === this.maxTs) {
         this.playMode = PlayMode.STANDBY
       }
     },
@@ -294,6 +294,20 @@ export default {
       const runResultOT = new ElicastRun(ts, response.data.exit_code, response.data.output)
       this.ots.push(runResultOT)
       this.redrawRunOutput(runResultOT)
+    },
+    cutOts () {
+      const firstCutOtIdx = this.ots.findIndex(ot => this.ts < ot.ts)
+      if (firstCutOtIdx <= 0) return
+
+      const lastAppliedOt = this.ots[firstCutOtIdx - 1]
+
+      if (!_.isUndefined(lastAppliedOt._exId)) return  // Not allow "In exercise" state
+
+      this.maxTs = this.ts
+      this.ots.splice(firstCutOtIdx, this.ots.length - firstCutOtIdx)
+
+      this.ots.push(new ElicastNop(this.ts + 1))  // Trick to invoke ts update
+      this.ts += 1
     },
     handleEditorBeforeChange (cm, changeObj) {
       if (!this.playMode.isRecording()) return

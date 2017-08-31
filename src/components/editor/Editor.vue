@@ -1,7 +1,6 @@
 <template>
   <div id="editor">
     <div>
-      <span v-show="elicastId !== null">(ID-{{ elicastId }})</span>
       <input class="elicast-title" v-model.trim="elicastTitle">
     </div>
     <div class="code-wrap">
@@ -15,25 +14,32 @@
       </codemirror>
 
       <div class="code-right-pane">
-        <div class="record-controls"
-             v-show="playMode.isRecording()">
-         <button class="run-code-button btn btn-sm btn-light"
-                 :disabled="!playModeReady"
-                 @click="runCode">
-            <i class="fa fa-terminal"></i> Run
-          </button>
+        <div class="record-controls">
+          <div v-show="playMode === PlayMode.PAUSE">
+            <button class="btn btn-sm btn-light"
+                   @click="cutOts">
+              <i class="fa fa-scissors"></i> Cut Here
+            </button>
+          </div>
 
-          <button class="btn btn-sm btn-light"
-                  @click="toggleRecordExercise"
-                  :disabled="!playModeReady">
+          <div v-show="playMode.isRecording()">
+            <button class="btn btn-sm btn-light"
+                   :disabled="!playModeReady"
+                   @click="runCode">
+              <i class="fa fa-terminal"></i> Run
+            </button>
 
-            <span v-show="playMode === PlayMode.RECORD">
-              <i class="fa fa-pencil-square-o"></i> Record Exercise
-            </span>
-            <span v-show="playMode === PlayMode.RECORD_EXERCISE">
-              <i class="fa fa-pencil-square-o"></i> End Exercise Recording
-            </span>
-          </button>
+            <button class="btn btn-sm btn-light"
+                    @click="toggleRecordExercise"
+                    :disabled="!playModeReady">
+              <span v-show="playMode === PlayMode.RECORD">
+                <i class="fa fa-pencil-square-o"></i> Record Exercise
+              </span>
+              <span v-show="playMode === PlayMode.RECORD_EXERCISE">
+                <i class="fa fa-pencil-square-o"></i> End Exercise Recording
+              </span>
+            </button>
+          </div>
         </div>
 
         <RunOutputView :output="runOutput"></RunOutputView>

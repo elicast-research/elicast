@@ -20,7 +20,7 @@
       </div>
     </div>
     <div class="run-output card-body px-3 py-2">
-      {{ output }}
+      <pre>{{ output }}</pre>
     </div>
     <svg class="resize-handle"
          xmlns="http://www.w3.org/2000/svg"
@@ -97,13 +97,16 @@ $codeFontFamily: Menlo, Consolas, 'DejaVu Sans Mono', monospace;
   }
 
   .run-output {
+    background-color: $outputBackgroundColor;
+  }
+
+  .run-output pre {
     overflow: auto;
     font-size: $outputFontSize;
     font-family: $codeFontFamily;
     line-height: $lineHeight;
 
     color: $outputFontColor;
-    background-color: $outputBackgroundColor;
   }
 
   .resize-handle {

@@ -25,11 +25,12 @@ export default {
         this.isMouseDown = true
 
         const elRect = this.$el.getBoundingClientRect()
-        this.isHandleTop = e.screenY < (elRect.top + elRect.bottom) / 2
-        this.isHandleLeft = e.screenX < (elRect.left + elRect.right) / 2
+        this.isHandleTop = e.clientY < (elRect.top + elRect.bottom) / 2
+        this.isHandleLeft = e.clientX < (elRect.left + elRect.right) / 2
+        console.log(elRect.left, e.clientX, elRect.top, e.clientY)
 
-        this.startScreenX = e.screenX
-        this.startScreenY = e.screenY
+        this.startClientX = e.clientX
+        this.startClientY = e.clientY
         this.startElementWidth = this.$el.offsetWidth
         this.startElementHeight = this.$el.offsetHeight
 
@@ -43,8 +44,8 @@ export default {
       if (this.isMouseDown) {
         e.preventDefault()
 
-        let offsetX = (e.screenX - this.startScreenX) * (this.isHandleLeft ? -1 : 1)
-        let offsetY = (e.screenY - this.startScreenY) * (this.isHandleTop ? -1 : 1)
+        let offsetX = (e.clientX - this.startClientX) * (this.isHandleLeft ? -1 : 1)
+        let offsetY = (e.clientY - this.startClientY) * (this.isHandleTop ? -1 : 1)
 
         this.$el.style.width = (this.startElementWidth + offsetX) + 'px'
         this.$el.style.height = (this.startElementHeight + offsetY) + 'px'

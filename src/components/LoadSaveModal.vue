@@ -45,9 +45,10 @@ import axios from 'axios'
 import blobUtil from 'blob-util'
 import moment from 'moment'
 import Modal from 'exports-loader?Modal!bootstrap/js/dist/modal'
+import _ from 'lodash'
 import qs from 'qs'
 
-import ElicastOT from '@/elicast/elicast-ot'
+import ElicastOT, { ElicastExercise } from '@/elicast/elicast-ot'
 
 export default {
   props: {
@@ -107,10 +108,24 @@ export default {
       const response = await axios.get('http://anne.pjknkda.com:7822/elicast/' + elicastId)
       const elicastRaw = response.data.elicast
 
+      const ots = elicastRaw.ots.map(ElicastOT.fromJSON)
+
+      let lastExId = null
+      for (let i = 0; i < ots.length; i++) {
+        const ot = ots[i]
+        if (ot instanceof ElicastExercise) {
+          lastExId = _.isNull(lastExId) ? ot.exId : null
+        } else if (!_.isNull(lastExId)) {
+          ot._exId = lastExId
+        } else if (!_.isUndefined(ot._exId)) {
+          delete ot._exId
+        }
+      }
+
       const elicast = new Elicast(
         elicastRaw.id,
         elicastRaw.title,
-        elicastRaw.ots.map(ElicastOT.fromJSON),
+        ots,
         elicastRaw.voice_blob === '' ? null : await blobUtil.dataURLToBlob(elicastRaw.voice_blob)
       )
 

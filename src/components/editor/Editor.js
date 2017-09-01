@@ -372,6 +372,7 @@ export default {
 
       switch (this.playMode) {
         case PlayMode.RECORD:
+        case PlayMode.ASSERT:
           if (!ElicastOT.isChangeAllowedForRecord(this.ots, cm, changeObj)) {
             console.warn('Editing non-editable area')
             changeObj.cancel()

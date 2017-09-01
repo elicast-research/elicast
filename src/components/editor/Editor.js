@@ -96,8 +96,7 @@ export default {
         this.recordExerciseSession.isInitiated()
     },
     recordAssertInitiated () {
-      return this.playMode === PlayMode.ASSERT &&
-        this.recordAssertSession.isInitiated()
+      return this.playMode === PlayMode.ASSERT
     },
     tsDisplay () {
       // TODO use moment.js
@@ -173,7 +172,6 @@ export default {
       if (shouldRedrawExerciseAreas) {
         ElicastOT.redrawExerciseAreas(this.cm, this.ots.slice(0, newOtIdx + 1))
       }
-
       // restore assert areas
       if (shouldRedrawAssertAreas) {
         ElicastOT.redrawAssertAreas(this.cm, this.ots.slice(0, newOtIdx + 1))

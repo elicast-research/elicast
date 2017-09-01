@@ -1,4 +1,4 @@
-import { ElicastText, ElicastAssert } from '@/elicast/elicast-ot'
+import { ElicastAssert } from '@/elicast/elicast-ot'
 import _ from 'lodash'
 
 function markAssertOTs (recordAssertSession) {
@@ -28,17 +28,6 @@ export default class RecordAssertSession {
     markAssertOTs(this)
     const newOt = new ElicastAssert(ts)
     this.ots.push(newOt)
-  }
-
-  /**
-   * isInitiated - whether any text change happened during the assert
-   * recording session.
-   *
-   * @return {Boolean}  true if initiated, otherwise false
-   */
-  isInitiated () {
-    return !_.isNil(this.startOTIndex) &&
-      this.ots.slice(this.startOTIndex).some(ot => ot instanceof ElicastText)
   }
 
   getAssertOTs () {

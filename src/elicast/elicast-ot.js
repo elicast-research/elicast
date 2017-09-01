@@ -263,13 +263,10 @@ function getAreas (ots, areaType = ElicastOTAreaSet.TEXT) {
         i = assertEndIndex
 
         if (assertAreas.length === 0) break
-        if (assertAreas.length !== 1) {
-          throw new Error('Solution OT must be a single area')
-        }
 
-        const assertArea = assertAreas[0]
-        areaSet.insert(ElicastOTAreaSet.ASSERT, assertArea.fromPos, assertArea.toPos, false)
-
+        assertAreas.forEach(area => {
+          areaSet.insert(ElicastOTAreaSet.ASSERT, area.fromPos, area.toPos, false)
+        })
         break
     }
   }
@@ -390,7 +387,6 @@ ElicastOT.redrawAssertAreas = function (cm, ots) {
   cm.doc.getAllMarks()
     .filter(marker => marker.className === 'assert-block')
     .forEach(marker => marker.clear())
-
   const cmContent = cm.doc.getValue()
 
   getAreas(ots)
@@ -403,19 +399,17 @@ ElicastOT.redrawAssertAreas = function (cm, ots) {
 }
 
 ElicastOT.redrawRecordingAssertArea = function (cm, ots) {
-  // FIXME: integrate with ElicastOT.redrawRecordingExerciseArea
   ElicastOT.clearRecordingAssertArea(cm)
 
   const cmContent = cm.doc.getValue()
 
-  const assertArea = getAreas(ots).pop()
-  if (assertArea.type !== ElicastOTAreaSet.ASSERT) {
-    throw new Error('Invalid assert area')
-  }
-
-  const fromLineCh = posToLineCh(cmContent, assertArea.fromPos)
-  const toLineCh = posToLineCh(cmContent, assertArea.toPos)
-  cm.doc.markText(fromLineCh, toLineCh, { className: 'recording-assert-block' })
+  getAreas(ots)
+    .filter(area => area.type === ElicastOTAreaSet.ASSERT)
+    .forEach(area => {
+      const fromLineCh = posToLineCh(cmContent, area.fromPos)
+      const toLineCh = posToLineCh(cmContent, area.toPos)
+      cm.doc.markText(fromLineCh, toLineCh, { className: 'recording-assert-block' })
+    })
 }
 
 ElicastOT.clearRecordingAssertArea = function (cm) {

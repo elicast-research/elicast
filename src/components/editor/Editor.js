@@ -343,6 +343,7 @@ export default {
       const lastAppliedOt = this.ots[firstCutOtIdx - 1]
 
       if (!_.isUndefined(lastAppliedOt._exId)) return  // Not allow "In exercise" state
+      if (!_.isUndefined(lastAppliedOt._assert)) return  // Not allow "In assert" state
 
       this.maxTs = this.ts
       this.ots.splice(firstCutOtIdx, this.ots.length - firstCutOtIdx)
@@ -427,16 +428,9 @@ export default {
 
       _.defer(this.$refs.slider.layout)
     },
-    async toggleRecordExercise () {
+    toggleRecordExercise () {
       if (!this.playModeReady) return
 
-      if (this.playMode === PlayMode.RECORD_EXERCISE) {
-        let isPassed = await this.evaluateAssertion()
-        if (!isPassed) {
-          alert('Assertion failed.')
-          return
-        }
-      }
       const toggleState = {
         [PlayMode.RECORD]: PlayMode.RECORD_EXERCISE,
         [PlayMode.RECORD_EXERCISE]: PlayMode.RECORD

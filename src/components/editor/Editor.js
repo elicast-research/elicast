@@ -433,7 +433,7 @@ export default {
       if (this.playMode === PlayMode.RECORD_EXERCISE) {
         let isPassed = await this.evaluateAssertion()
         if (!isPassed) {
-          alert('Assertion Failed.')
+          alert('Assertion failed.')
           return
         }
       }
@@ -451,7 +451,7 @@ export default {
 
       let isPassed = await this.evaluateAssertion()
       if (!isPassed) {
-        alert('Assertion Failed.')
+        alert('Assertion failed.')
         return
       }
 

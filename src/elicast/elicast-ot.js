@@ -228,13 +228,30 @@ function isAreaConflict (area, fromPos, toPos) {
     (area.fromPos < fromPos && fromPos < area.toPos)
 }
 
-function getAreas (ots, areaType = ElicastOTAreaSet.TEXT) {
+function getAreas (ots, isNested = false, parentAreaType = null) {
   const areaSet = new ElicastOTAreaSet()
 
   for (let i = 0; i < ots.length; i++) {
     const ot = ots[i]
     switch (ot.constructor) {
       case ElicastText:
+        let areaType = null
+        if (_.isNil(parentAreaType) && !isNested) {
+          areaType = ElicastOTAreaSet.TEXT
+        } else if (_.isNil(parentAreaType) && isNested) {
+          throw new Error('Invalid nesting')
+        } else if (!_.isNil(parentAreaType) && !isNested) {
+          areaType = ElicastOTAreaSet.TEXT
+        } else if (!_.isNil(parentAreaType) && isNested) {
+          if (parentAreaType === ElicastOTAreaSet.EXERCISE) {
+            areaType = ElicastOTAreaSet.EXERCISE_BUILD
+          } else if (parentAreaType === ElicastOTAreaSet.ASSERT) {
+            areaType = ElicastOTAreaSet.ASSERT_BUILD
+          } else {
+            throw new Error('Invalid parentAreaType')
+          }
+        }
+
         if (ot.removedText.length > 0) {
           areaSet.remove(areaType, ot.fromPos, ot.fromPos + ot.removedText.length)
         }
@@ -243,9 +260,12 @@ function getAreas (ots, areaType = ElicastOTAreaSet.TEXT) {
         }
         break
       case ElicastExercise:
+        if (!_.isNil(parentAreaType)) {
+          throw new Error('Invalid ot')
+        }
         let exerciseEndIndex = ots.findIndex((ot, idx) => idx > i && ot instanceof ElicastExercise)
         exerciseEndIndex = exerciseEndIndex < 0 ? ots.length : exerciseEndIndex
-        const exerciseAreas = getAreas(ots.slice(i + 1, exerciseEndIndex), ElicastOTAreaSet.EXERCISE_BUILD)
+        const exerciseAreas = getAreas(ots.slice(i + 1, exerciseEndIndex), true, ElicastOTAreaSet.EXERCISE)
         i = exerciseEndIndex
 
         if (exerciseAreas.length === 0) break
@@ -258,9 +278,12 @@ function getAreas (ots, areaType = ElicastOTAreaSet.TEXT) {
 
         break
       case ElicastAssert:
+        if (!_.isNil(parentAreaType)) {
+          throw new Error('Invalid ot')
+        }
         let assertEndIndex = ots.findIndex((ot, idx) => idx > i && ot instanceof ElicastAssert)
         assertEndIndex = assertEndIndex < 0 ? ots.length : assertEndIndex
-        const assertAreas = getAreas(ots.slice(i + 1, assertEndIndex), ElicastOTAreaSet.ASSERT_BUILD)
+        const assertAreas = getAreas(ots.slice(i + 1, assertEndIndex), true, ElicastOTAreaSet.ASSERT)
         i = assertEndIndex
 
         if (assertAreas.length === 0) break

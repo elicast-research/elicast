@@ -9,6 +9,7 @@ import 'codemirror/addon/selection/mark-selection'
 import 'codemirror/mode/python/python'
 import _ from 'lodash'
 import axios from 'axios'
+import blobUtil from 'blob-util'
 import qs from 'qs'
 
 class PlayMode {
@@ -295,7 +296,7 @@ export default {
       this.ots.push(runResultOT)
       this.redrawRunOutput(runResultOT)
     },
-    cutOts () {
+    async cutOts () {
       const firstCutOtIdx = this.ots.findIndex(ot => this.ts < ot.ts)
       if (firstCutOtIdx <= 0) return
 
@@ -303,9 +304,17 @@ export default {
 
       if (!_.isUndefined(lastAppliedOt._exId)) return  // Not allow "In exercise" state
 
+      const audioSplitResponse = await axios.post('http://anne.pjknkda.com:7822/audio/split',
+        qs.stringify({
+          segments: JSON.stringify([[0, this.ts]]),
+          audio_blob: await blobUtil.blobToDataURL(this.recordSound.recordedBlob)
+        }))
+
+      this.recordSound = new RecordSound('audio/webm',
+        await blobUtil.dataURLToBlob(audioSplitResponse.data.outputs[0]))
+
       this.maxTs = this.ts
       this.ots.splice(firstCutOtIdx, this.ots.length - firstCutOtIdx)
-
       this.ots.push(new ElicastNop(this.ts + 1))  // Trick to invoke ts update
       this.ts += 1
     },

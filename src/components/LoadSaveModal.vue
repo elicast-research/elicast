@@ -48,7 +48,7 @@ import Modal from 'exports-loader?Modal!bootstrap/js/dist/modal'
 import _ from 'lodash'
 import qs from 'qs'
 
-import ElicastOT, { ElicastExercise } from '@/elicast/elicast-ot'
+import ElicastOT, { ElicastExercise, ElicastAssert } from '@/elicast/elicast-ot'
 
 export default {
   props: {
@@ -111,6 +111,7 @@ export default {
       const ots = elicastRaw.ots.map(ElicastOT.fromJSON)
 
       let lastExId = null
+      let lastAssert = null
       for (let i = 0; i < ots.length; i++) {
         const ot = ots[i]
         if (ot instanceof ElicastExercise) {
@@ -119,6 +120,14 @@ export default {
           ot._exId = lastExId
         } else if (!_.isUndefined(ot._exId)) {
           delete ot._exId
+        }
+
+        if (ot instanceof ElicastAssert) {
+          lastAssert = _.isNull(lastAssert) ? true : null
+        } else if (!_.isNull(lastAssert)) {
+          ot._assert = lastAssert
+        } else if (!_.isUndefined(ot._assert)) {
+          delete ot._assert
         }
       }
 

@@ -9,7 +9,9 @@
       <codemirror ref="cm"
                   v-model="code"
                   :class="{ 'solve-exercise': playMode === PlayMode.SOLVE_EXERCISE }"
-                  :options="editorOptions">
+                  :options="editorOptions"
+                  @beforeChange="handleEditorBeforeChange"
+                  @change="handleEditorChange">
       </codemirror>
 
       <div class="code-right-pane">
@@ -105,7 +107,7 @@
 }
 
 .ts-display {
-  width: 3.4rem;
+  width: 3.8rem;
 }
 
 </style>

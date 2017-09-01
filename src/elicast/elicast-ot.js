@@ -175,7 +175,6 @@ const OT_CLASS_MAP = _.keyBy([
   ElicastText,
   ElicastExercise,
   ElicastExerciseShow,
-  ElicastAssert,
   ElicastRun
 ], otClass => otClass.COMMAND)
 
@@ -228,30 +227,13 @@ function isAreaConflict (area, fromPos, toPos) {
     (area.fromPos < fromPos && fromPos < area.toPos)
 }
 
-function getAreas (ots, isNested = false, parentAreaType = null) {
+function getAreas (ots, areaType = ElicastOTAreaSet.TEXT) {
   const areaSet = new ElicastOTAreaSet()
 
   for (let i = 0; i < ots.length; i++) {
     const ot = ots[i]
     switch (ot.constructor) {
       case ElicastText:
-        let areaType = null
-        if (_.isNil(parentAreaType) && !isNested) {
-          areaType = ElicastOTAreaSet.TEXT
-        } else if (_.isNil(parentAreaType) && isNested) {
-          throw new Error('Invalid nesting')
-        } else if (!_.isNil(parentAreaType) && !isNested) {
-          areaType = ElicastOTAreaSet.TEXT
-        } else if (!_.isNil(parentAreaType) && isNested) {
-          if (parentAreaType === ElicastOTAreaSet.EXERCISE) {
-            areaType = ElicastOTAreaSet.EXERCISE_BUILD
-          } else if (parentAreaType === ElicastOTAreaSet.ASSERT) {
-            areaType = ElicastOTAreaSet.ASSERT_BUILD
-          } else {
-            throw new Error('Invalid parentAreaType')
-          }
-        }
-
         if (ot.removedText.length > 0) {
           areaSet.remove(areaType, ot.fromPos, ot.fromPos + ot.removedText.length)
         }
@@ -260,12 +242,9 @@ function getAreas (ots, isNested = false, parentAreaType = null) {
         }
         break
       case ElicastExercise:
-        if (!_.isNil(parentAreaType)) {
-          throw new Error('Invalid ot')
-        }
         let exerciseEndIndex = ots.findIndex((ot, idx) => idx > i && ot instanceof ElicastExercise)
         exerciseEndIndex = exerciseEndIndex < 0 ? ots.length : exerciseEndIndex
-        const exerciseAreas = getAreas(ots.slice(i + 1, exerciseEndIndex), true, ElicastOTAreaSet.EXERCISE)
+        const exerciseAreas = getAreas(ots.slice(i + 1, exerciseEndIndex), ElicastOTAreaSet.EXERCISE_BUILD)
         i = exerciseEndIndex
 
         if (exerciseAreas.length === 0) break
@@ -278,12 +257,9 @@ function getAreas (ots, isNested = false, parentAreaType = null) {
 
         break
       case ElicastAssert:
-        if (!_.isNil(parentAreaType)) {
-          throw new Error('Invalid ot')
-        }
         let assertEndIndex = ots.findIndex((ot, idx) => idx > i && ot instanceof ElicastAssert)
         assertEndIndex = assertEndIndex < 0 ? ots.length : assertEndIndex
-        const assertAreas = getAreas(ots.slice(i + 1, assertEndIndex), true, ElicastOTAreaSet.ASSERT)
+        const assertAreas = getAreas(ots.slice(i + 1, assertEndIndex), ElicastOTAreaSet.ASSERT_BUILD)
         i = assertEndIndex
 
         if (assertAreas.length === 0) break
@@ -395,6 +371,20 @@ ElicastOT.clearRecordingExerciseArea = function (cm) {
     .forEach(marker => marker.clear())
 }
 
+ElicastOT.redrawSolveExerciseArea = function (cm, solveOts) {
+  cm.doc.getAllMarks()
+    .filter(marker => marker.className === 'exercise-block')
+    .forEach(marker => marker.clear())
+
+  const cmContent = cm.doc.getValue()
+
+  getAreas(solveOts).forEach(area => {
+    const fromLineCh = posToLineCh(cmContent, area.fromPos)
+    const toLineCh = posToLineCh(cmContent, area.toPos)
+    cm.doc.markText(fromLineCh, toLineCh, { className: 'exercise-block' })
+  })
+}
+
 ElicastOT.redrawAssertAreas = function (cm, ots) {
   // FIXME: integrate with ElicastOT.redrawExerciseAreas
   cm.doc.getAllMarks()
@@ -434,6 +424,7 @@ ElicastOT.clearRecordingAssertArea = function (cm) {
     .filter(marker => marker.className === 'recording-assert-block')
     .forEach(marker => marker.clear())
 }
+
 /*  This function convert CodeMirror's current selection to Elicast
  *  "selection" OT. To only capture the selection changes, call this
  *  function when `CodeMirror.doc.beforeSelectionChange` event is fired.
@@ -485,38 +476,64 @@ ElicastOT.makeOTFromCMChange = function (cm, changeObj, ts, exId) {
   return new ElicastText(ts, fromPos, toPos, insertedText, removedText, exId)
 }
 
-ElicastOT.isChangeAllowed = function (ots, recordExerciseSession, cm, changeObj) {
+ElicastOT.isChangeAllowedForRecord = function (ots, cm, changeObj) {
   const cmContent = cm.doc.getValue()
   const fromPos = lineChToPos(cmContent, changeObj.from)
   const toPos = lineChToPos(cmContent, changeObj.to)
 
-  if (!recordExerciseSession) {
-    // Prevent to edit inside of existing exercise areas
-    const areas = getAreas(ots)
-    for (const area of areas) {
-      if (area.type === ElicastOTAreaSet.EXERCISE && isAreaConflict(area, fromPos, toPos)) {
-        return false
-      }
-    }
-    return true
-  } else {
-    // Only allow current exercise area
-
-    // Exercise cannot be initiated with text removal
-    if (!recordExerciseSession.isInitiated() && fromPos !== toPos) {
+  // Prevent to edit inside of existing exercise areas
+  const areas = getAreas(ots)
+  for (const area of areas) {
+    if (area.type === ElicastOTAreaSet.EXERCISE && isAreaConflict(area, fromPos, toPos)) {
       return false
     }
+  }
+  return true
+}
 
-    const exOts = recordExerciseSession.getExerciseOTs()
-    const areas = getAreas(exOts)
+ElicastOT.isChangeAllowedForRecordExercise = function (ots, recordExerciseSession, cm, changeObj) {
+  const cmContent = cm.doc.getValue()
+  const fromPos = lineChToPos(cmContent, changeObj.from)
+  const toPos = lineChToPos(cmContent, changeObj.to)
 
-    if (areas.length === 0) {
-      return true
-    } else if (areas.length > 1 || areas[0].type !== ElicastOTAreaSet.EXERCISE) {
-      throw new Error('Exercise area is inconsistent')
+  // Only allow current exercise area
+
+  // Exercise cannot be initiated with text removal
+  if (!recordExerciseSession.isInitiated() && fromPos !== toPos) {
+    return false
+  }
+
+  const exOts = recordExerciseSession.getExerciseOTs()
+  const areas = getAreas(exOts)
+
+  if (areas.length === 0) {
+    // record not initiated yet
+    return true
+  } else if (areas.length > 1 || areas[0].type !== ElicastOTAreaSet.EXERCISE) {
+    throw new Error('Invalid exercise area')
+  }
+
+  const exArea = areas[0]
+  return exArea.fromPos <= fromPos && toPos <= exArea.toPos
+}
+
+ElicastOT.isChangeAllowedForSolveExercise = function (ots, recordExerciseSession, cm, changeObj) {
+  const cmContent = cm.doc.getValue()
+  const fromPos = lineChToPos(cmContent, changeObj.from)
+  const toPos = lineChToPos(cmContent, changeObj.to)
+
+  if (!recordExerciseSession.isInitiated()) {
+    // first text ot for solve exercise
+    const firstExerciseTextOt = recordExerciseSession.getFirstExerciseTextOt()
+    return firstExerciseTextOt.fromPos <= fromPos && toPos <= firstExerciseTextOt.toPos
+  } else {
+    // within solving area
+    const areas = getAreas(recordExerciseSession.solveOts)
+    if (areas.length !== 1 || areas[0].type !== ElicastOTAreaSet.TEXT) {
+      throw new Error('Invalid solve area')
     }
 
-    const exArea = areas[0]
-    return exArea.fromPos <= fromPos && toPos <= exArea.toPos
+    const solveArea = areas[0]
+    return solveArea.fromPos <= fromPos && toPos <= solveArea.toPos
   }
 }

@@ -372,11 +372,23 @@ export default {
     handleEditorBeforeChange (cm, changeObj) {
       if (!this.playMode.isRecording()) return
 
-      if (!ElicastOT.isChangeAllowed(this.ots, this.recordExerciseSession, cm, changeObj)) {
-        console.warn('Editing non-editable area')
-        changeObj.cancel()
-        return
+      switch (this.playMode) {
+        case PlayMode.RECORD:
+          if (!ElicastOT.isChangeAllowedForRecord(this.ots, cm, changeObj)) {
+            console.warn('Editing non-editable area')
+            changeObj.cancel()
+            return
+          }
+          break
+        case PlayMode.RECORD_EXERCISE:
+          if (!ElicastOT.isChangeAllowedForRecordExercise(this.ots, this.recordExerciseSession, cm, changeObj)) {
+            console.warn('Editing non-editable area')
+            changeObj.cancel()
+            return
+          }
+          break
       }
+
       const ts = this.recordStartOt.getRelativeTS()
       const newOT = ElicastOT.makeOTFromCMChange(cm, changeObj, ts)
       this.ots.push(newOT)

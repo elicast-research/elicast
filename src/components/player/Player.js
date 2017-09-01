@@ -1,4 +1,5 @@
-import ElicastOT, { ElicastText, ElicastSelection, ElicastRun } from '@/elicast/elicast-ot'
+import ElicastOT, { ElicastText, ElicastSelection, ElicastRun, ElicastExercise } from '@/elicast/elicast-ot'
+import SolveExerciseSession from './solve-exercise-session'
 import Slider from '@/components/Slider'
 import RunOutputView from '@/components/RunOutputView'
 import { codemirror } from 'vue-codemirror'
@@ -51,6 +52,7 @@ export default {
       code: '',
       elicastId: this.elicast.id,
       elicastTitle: this.elicast.title,
+      solveExerciseSession: null,
       ots: this.elicast.ots,
       ts: -1,
       playMode: PlayMode.PAUSE,
@@ -74,7 +76,7 @@ export default {
     },
 
     tsDisplay () {
-      return moment(this.ts).format('m:ss') + '/' + moment(this.maxTs).format('m:ss')
+      return moment(this.ts).format('m:ss') + ' / ' + moment(this.maxTs).format('m:ss')
     }
   },
 
@@ -103,6 +105,11 @@ export default {
           shouldRedrawExerciseAreas = true
         } else if (ot instanceof ElicastRun) {
           shouldRedrawRunOutput = true
+        } else if (ot instanceof ElicastExercise && !ot._solved) {
+          // start solve exercise
+          this.solveExerciseSession = new SolveExerciseSession(this.ots, ot)
+          this.solveExerciseSession.start()
+          this.playMode = PlayMode.SOLVE_EXERCISE
         }
       }
       // prevOtIdx > newOtIdx
@@ -228,6 +235,24 @@ export default {
       const runResultOT = new ElicastRun(0, response.data.exit_code, response.data.output)
       this.redrawRunOutput(runResultOT)
     },
+    handleEditorBeforeChange (cm, changeObj) {
+      if (this.playMode !== PlayMode.SOLVE_EXERCISE) return
+
+      if (!ElicastOT.isChangeAllowedForSolveExercise(this.ots, this.solveExerciseSession, cm, changeObj)) {
+        console.warn('Editing non-editable area')
+        changeObj.cancel()
+        return
+      }
+
+      const ts = this.solveExerciseSession.getRelativeTS()
+      const newOT = ElicastOT.makeOTFromCMChange(cm, changeObj, ts)
+      this.solveExerciseSession.pushSolveOt(newOT)
+    },
+    handleEditorChange (cm, changeObj) {
+      if (this.playMode === PlayMode.SOLVE_EXERCISE) {
+        ElicastOT.redrawSolveExerciseArea(this.cm, this.solveExerciseSession.solveOts)
+      }
+    },
     handleEditorMousedown (event) {
       if (this.playMode === PlayMode.PLAYBACK) {
         this.togglePlayMode()
@@ -235,6 +260,24 @@ export default {
     },
     handleSliderChange (val, isMouseDown) {
       if (isMouseDown) this.playMode = PlayMode.PAUSE
+
+      if (val > this.ts) {
+        let prevOtIdx = this.ots.findIndex(ot => this.ts < ot.ts)
+        prevOtIdx = (prevOtIdx < 0 ? this.ots.length : prevOtIdx) - 1
+        let newOtIdx = this.ots.findIndex(ot => val < ot.ts)
+        newOtIdx = (newOtIdx < 0 ? this.ots.length : newOtIdx) - 1
+
+        for (let i = prevOtIdx; i <= newOtIdx; i++) {
+          if (this.ots[i] instanceof ElicastExercise) {
+            // TODO if solved, let it pass
+            val = this.ots[i].ts
+            break
+          }
+        }
+
+        this.$refs.slider.val = val
+      }
+
       this.ts = val
     },
     playbackTick () {

@@ -1,6 +1,7 @@
-import ElicastOT, { ElicastNop, ElicastSelection, ElicastText, ElicastRun } from '@/elicast/elicast-ot'
+import ElicastOT, { ElicastNop, ElicastSelection, ElicastText, ElicastRun, ElicastAssert } from '@/elicast/elicast-ot'
 import Elicast from '@/elicast/elicast'
 import RecordExerciseSession from './record-exercise-session'
+import RecordAssertSession from './record-assert-session'
 import RecordSound from './record-sound'
 import Slider from '@/components/Slider'
 import RunOutputView from '@/components/RunOutputView'
@@ -16,8 +17,10 @@ class PlayMode {
   static PLAYBACK = new PlayMode('playback')
   static PAUSE = new PlayMode('pause')
   static STANDBY = new PlayMode('standby')
+  static STANDBY_ASSERT = new PlayMode('standby_assert')
   static RECORD = new PlayMode('record')
   static RECORD_EXERCISE = new PlayMode('record_exercise')
+  static ASSERT = new PlayMode('assert')
 
   constructor (name) {
     this.name = name
@@ -28,7 +31,7 @@ class PlayMode {
   }
 
   isRecording () {
-    return [PlayMode.RECORD, PlayMode.RECORD_EXERCISE].includes(this)
+    return [PlayMode.RECORD, PlayMode.RECORD_EXERCISE, PlayMode.ASSERT].includes(this)
   }
 }
 
@@ -66,6 +69,7 @@ export default {
       maxTs: 0,
       recordStartOt: null,
       recordExerciseSession: null,
+      recordAssertSession: null,
       recordSound: new RecordSound('audio/webm', this.elicast ? this.elicast.voiceBlob : null),
       runOutput: null,
       playbackSound: null,
@@ -90,6 +94,10 @@ export default {
       // TODO initiate with removal
       return this.playMode === PlayMode.RECORD_EXERCISE &&
         this.recordExerciseSession.isInitiated()
+    },
+    recordAssertInitiated () {
+      return this.playMode === PlayMode.ASSERT &&
+        this.recordAssertSession.isInitiated()
     },
     tsDisplay () {
       // TODO use moment.js
@@ -129,6 +137,7 @@ export default {
       newOtIdx = (newOtIdx < 0 ? this.ots.length : newOtIdx) - 1
 
       let shouldRedrawExerciseAreas = false
+      let shouldRedrawAssertAreas = false
       let shouldRedrawRunOutput = false
 
       // prevOtIdx < newOtIdx
@@ -137,6 +146,8 @@ export default {
         ElicastOT.applyOtToCM(this.cm, ot)
         if (ot instanceof ElicastText && ot._exId) {
           shouldRedrawExerciseAreas = true
+        } else if (ot instanceof ElicastText && ot._assert) {
+          shouldRedrawAssertAreas = true
         } else if (ot instanceof ElicastRun) {
           shouldRedrawRunOutput = true
         }
@@ -147,6 +158,8 @@ export default {
         ElicastOT.revertOtToCM(this.cm, ot)
         if (ot instanceof ElicastText && ot._exId) {
           shouldRedrawExerciseAreas = true
+        } else if (ot instanceof ElicastText && ot._assert) {
+          shouldRedrawAssertAreas = true
         } else if (ot instanceof ElicastRun) {
           shouldRedrawRunOutput = true
         }
@@ -161,6 +174,11 @@ export default {
         ElicastOT.redrawExerciseAreas(this.cm, this.ots.slice(0, newOtIdx + 1))
       }
 
+      // restore assert areas
+      if (shouldRedrawAssertAreas) {
+        ElicastOT.redrawAssertAreas(this.cm, this.ots.slice(0, newOtIdx + 1))
+      }
+
       // restore run output
       if (shouldRedrawRunOutput) {
         this.redrawRunOutput()
@@ -168,9 +186,10 @@ export default {
 
       // restore selection
       this.redrawSelection()
-
       if (ts === this.maxTs) {
-        this.playMode = PlayMode.STANDBY
+        // FIXME: make below loop into true/false global status
+        this.playMode = this.ots.findIndex(ot => ot instanceof ElicastAssert) === -1
+          ? PlayMode.STANDBY : PlayMode.STANDBY_ASSERT
       }
     },
 
@@ -210,6 +229,28 @@ export default {
 
         ElicastOT.redrawExerciseAreas(this.cm, this.ots)
         ElicastOT.clearRecordingExerciseArea(this.cm)
+      } else if (playMode === PlayMode.ASSERT) {
+        // start recording assert
+        this.recordAssertSession = new RecordAssertSession(this.ots)
+        const lastTs = this.ots.length ? this.ots[this.ots.length - 1].ts : 0
+        this.recordStartOt = this.recordAssertSession.startRecording(lastTs)
+
+        await this.recordSound.record()
+        if (this.recordTimer !== -1) throw new Error('recordTimer is not cleared')
+        this.recordTimer = setInterval(this.recordTick, RECORD_TICK)
+      } else if (prevPlayMode === PlayMode.ASSERT && playMode === PlayMode.STANDBY_ASSERT) {
+        // end recording assert
+        const ts = this.recordStartOt.getRelativeTS()
+        this.recordAssertSession.finishRecording(ts)
+        this.recordAssertSession = null
+
+        await this.recordSound.stopRecording()
+        this.recordStartOt = null
+        clearInterval(this.recordTimer)
+        this.recordTimer = -1
+        this.recordAudioChunks = null
+        ElicastOT.redrawAssertAreas(this.cm, this.ots)
+        ElicastOT.clearRecordingAssertArea(this.cm)
       } else if (playMode === PlayMode.PLAYBACK) {
         // start playback
         if (this.playbackTimer !== -1) throw new Error('playbackTimer is not cleared')
@@ -303,6 +344,7 @@ export default {
       const lastAppliedOt = this.ots[firstCutOtIdx - 1]
 
       if (!_.isUndefined(lastAppliedOt._exId)) return  // Not allow "In exercise" state
+      if (!_.isUndefined(lastAppliedOt._assert)) return  // Not allow "In assert" state
 
       const audioSplitResponse = await axios.post('http://anne.pjknkda.com:7822/audio/split',
         qs.stringify({
@@ -317,6 +359,15 @@ export default {
       this.ots.splice(firstCutOtIdx, this.ots.length - firstCutOtIdx)
       this.ots.push(new ElicastNop(this.ts + 1))  // Trick to invoke ts update
       this.ts += 1
+    },
+    async evaluateAssertion () {
+      this.runOutput = '/* running... */'
+      const response = await axios.post('http://anne.pjknkda.com:7822/code/run', qs.stringify({
+        code: this.code
+      }))
+      this.runOutput = response.data.output
+
+      return response.data.exit_code === 0
     },
     handleEditorBeforeChange (cm, changeObj) {
       if (!this.playMode.isRecording()) return
@@ -336,6 +387,9 @@ export default {
       if (this.recordExerciseInitiated) {
         ElicastOT.redrawRecordingExerciseArea(this.cm,
           this.recordExerciseSession.getExerciseOTs())
+      } else if (this.recordAssertInitiated) {
+        ElicastOT.redrawRecordingAssertArea(this.cm,
+          this.recordAssertSession.getAssertOTs())
       }
     },
     handleEditorCursorActivity (cm) {
@@ -389,6 +443,25 @@ export default {
       const toggleState = {
         [PlayMode.RECORD]: PlayMode.RECORD_EXERCISE,
         [PlayMode.RECORD_EXERCISE]: PlayMode.RECORD
+      }
+      this.playMode = toggleState[this.playMode]
+      this.playModeReady = false
+
+      _.defer(this.$refs.slider.layout)
+    },
+    async toggleRecordAssert () {
+      if (!this.playModeReady) return
+
+      let isPassed = await this.evaluateAssertion()
+      if (!isPassed) {
+        alert('Assertion failed.')
+        return
+      }
+
+      const toggleState = {
+        [PlayMode.ASSERT]: PlayMode.STANDBY_ASSERT,
+        [PlayMode.STANDBY_ASSERT]: PlayMode.ASSERT,
+        [PlayMode.STANDBY]: PlayMode.ASSERT
       }
       this.playMode = toggleState[this.playMode]
       this.playModeReady = false

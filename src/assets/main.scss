@@ -27,6 +27,7 @@ $codeFontFamily: Menlo, Consolas, 'DejaVu Sans Mono', monospace;
 
 .CodeMirror {
   $exerciseBackgroundColor: transparentize(#E1BEE7, 0.5);
+  $assertBackgroundColor: transparentize(#EF4F4F, 0.5);
 
   font-family: $codeFontFamily;
 
@@ -34,6 +35,13 @@ $codeFontFamily: Menlo, Consolas, 'DejaVu Sans Mono', monospace;
     padding: .15em 0;
     border-radius: .1em;
     background-color: $exerciseBackgroundColor;
+    cursor: pointer;
+  }
+
+  .assert-block {
+    padding: .15em 0;
+    border-radius: 0;
+    background-color: $assertBackgroundColor;
     cursor: pointer;
   }
 }

@@ -6,7 +6,8 @@
     <div class="code-wrap">
       <codemirror ref="cm"
                   v-model="code"
-                  :class="{ 'recording-exercise': recordExerciseInitiated }"
+                  :class="{ 'recording-exercise': recordExerciseInitiated,
+                    'recording-assert': recordAssertInitiated }"
                   :options="editorOptions"
                   @beforeChange="handleEditorBeforeChange"
                   @change="handleEditorChange"
@@ -21,7 +22,22 @@
               <i class="fa fa-scissors"></i> Cut Here
             </button>
           </div>
-
+          <div v-show="playMode === PlayMode.STANDBY ||
+               playMode === PlayMode.STANDBY_ASSERT ||
+               playMode === PlayMode.ASSERT">
+            <button class="btn btn-sm btn-light"
+                    @click="toggleRecordAssert">
+               <span v-show="playMode === PlayMode.ASSERT">
+                 <i class="fa fa-pencil-square-o"></i> End Assert Recording
+               </span>
+               <span v-show="playMode === PlayMode.STANDBY">
+                 <i class="fa fa-pencil-square-o"></i> Record Assert
+               </span>
+               <span v-show="playMode === PlayMode.STANDBY_ASSERT">
+                 <i class="fa fa-pencil-square-o"></i> Record Assert
+               </span>
+            </button>
+          </div>
           <div v-show="playMode.isRecording()">
             <button class="btn btn-sm btn-light"
                    :disabled="!playModeReady"
@@ -30,6 +46,8 @@
             </button>
 
             <button class="btn btn-sm btn-light"
+                    v-show="playMode === PlayMode.RECORD ||
+                         playMode === PlayMode.RECORD_EXERCISE"
                     @click="toggleRecordExercise"
                     :disabled="!playModeReady">
               <span v-show="playMode === PlayMode.RECORD">
@@ -50,7 +68,10 @@
       <button ref="controlButton"
               class="btn btn-sm btn-light"
               @click="togglePlayMode"
-              :disabled="playMode === PlayMode.RECORD_EXERCISE || !playModeReady">
+              :disabled="playMode === PlayMode.RECORD_EXERCISE ||
+                playMode === PlayMode.ASSERT ||
+                playMode === PlayMode.STANDBY_ASSERT ||
+                !playModeReady">
         <i v-show="playMode === PlayMode.PAUSE" class="fa fa-play"></i>
         <i v-show="playMode === PlayMode.PLAYBACK" class="fa fa-pause"></i>
         <i v-show="playMode === PlayMode.STANDBY" class="fa fa-video-camera"></i>
@@ -125,10 +146,19 @@
     background-color: $readonlyBackgroundColor;
   }
 
+  .recording-assert ~ & {
+    background-color: $readonlyBackgroundColor;
+  }
+
   .recording-exercise-block {
     padding: .2em 0;
     border-radius: .2em;
     background-color: white;
   }
+  .recording-assert-block {
+     padding: .2em 0;
+     border-radius: .2em;
+     background-color: white;
+   }
 }
 </style>

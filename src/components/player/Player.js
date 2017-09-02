@@ -158,6 +158,9 @@ export default {
           ElicastOT.restoreCMToTs(this.cm, this.ots, this.ts)
           // restore selection
           this.redrawSelection()
+          // restore exercise area
+          let newOtIdx = this.ots.findIndex(ot => this.ts < ot.ts)
+          ElicastOT.redrawExerciseAreas(this.cm, this.ots.slice(0, newOtIdx))
           // restore run output
           this.redrawRunOutput()
         }

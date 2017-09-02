@@ -94,13 +94,27 @@ export default {
       let newOtIdx = this.ots.findIndex(ot => ts < ot.ts)
       newOtIdx = (newOtIdx < 0 ? this.ots.length : newOtIdx) - 1
 
+      if (prevOtIdx === newOtIdx) return
+
       let shouldRedrawExerciseAreas = false
       let shouldRedrawRunOutput = false
+
+      const isBigJump = Math.abs(newOtIdx - prevOtIdx) > 10
+
+      if (isBigJump) {
+        this.cm.setValue(ElicastOT.buildText(this.ots.slice(0, newOtIdx + 1)))
+      }
 
       // prevOtIdx < newOtIdx
       for (let i = prevOtIdx + 1; i <= newOtIdx && i < this.ots.length; i++) {
         const ot = this.ots[i]
-        ElicastOT.applyOtToCM(this.cm, ot)
+
+        if (ot instanceof ElicastSelection) continue
+
+        if (!(isBigJump && ot instanceof ElicastText)) {
+          ElicastOT.applyOtToCM(this.cm, ot)
+        }
+
         if (ot instanceof ElicastText && ot._exId) {
           shouldRedrawExerciseAreas = true
         } else if (ot instanceof ElicastRun) {
@@ -115,7 +129,13 @@ export default {
       // prevOtIdx > newOtIdx
       for (let i = prevOtIdx; i > newOtIdx && i >= 0; i--) {
         const ot = this.ots[i]
-        ElicastOT.revertOtToCM(this.cm, ot)
+
+        if (ot instanceof ElicastSelection) continue
+
+        if (!(isBigJump && ot instanceof ElicastText)) {
+          ElicastOT.revertOtToCM(this.cm, ot)
+        }
+
         if (ot instanceof ElicastText && ot._exId) {
           shouldRedrawExerciseAreas = true
         } else if (ot instanceof ElicastRun) {

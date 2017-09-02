@@ -60,8 +60,7 @@
       <Slider ref="slider"
               class="slider"
               @change="handleSliderChange"
-              :max="maxTs"
-              :disabled="playMode === PlayMode.SOLVE_EXERCISE"></Slider>
+              :max="maxTs"></Slider>
 
       <div class="ts-display text-secondary">
         {{ tsDisplay }}

@@ -121,8 +121,19 @@ export default {
           shouldRedrawRunOutput = true
         } else if (ot instanceof ElicastExercise && !ot._solved) {
           // start solve exercise
-          this.solveExerciseSession = new SolveExerciseSession(this.ots, ot)
-          this.solveExerciseSession.start()
+          if (_.isNil(this.solveExerciseSession)) {
+            this.solveExerciseSession = new SolveExerciseSession(this.ots, ot)
+            this.solveExerciseSession.start()
+          }
+
+          // apply previous solveOts before playMode changes to SOLVE_EXERCISE
+          this.solveExerciseSession.solveOts.forEach(ot => {
+            if (ot instanceof ElicastText) {
+              ElicastOT.applyOtToCM(this.cm, ot)
+            }
+          })
+          ElicastOT.redrawSolveExerciseArea(this.cm, this.solveExerciseSession.solveOts)
+
           this.playMode = PlayMode.SOLVE_EXERCISE
         }
       }
@@ -205,10 +216,10 @@ export default {
 
         clearTimeout(this.playbackTimer)
         this.playbackTimer = -1
+      } else if (prevPlayMode === PlayMode.SOLVE_EXERCISE) {
+        ElicastOT.restoreCMToTs(this.cm, this.ots, this.ts)
       }
 
-      // Give focus to the editor if new playMode is SOLVE_EXERCISE state,
-      // otherwise give focus to the control button
       _.defer(() => {
         if (playMode === PlayMode.SOLVE_EXERCISE) this.cm.focus()
         else this.$refs.controlButton.focus()

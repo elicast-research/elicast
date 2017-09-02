@@ -14,20 +14,20 @@
 </template>
 
 <script>
-import { ElicastText, ElicastSelection } from '@/elicast/elicast-ot'
+// import { ElicastText, ElicastSelection } from '@/elicast/elicast-ot'
 import Elicast from '@/elicast/elicast'
 import ElicastEditor from '@/components/editor'
 import LoadSaveModal from '@/components/LoadSaveModal'
 import _ from 'lodash'
 
-const INITIAL_CODE = `def hello(thing):
-  print(f"hello, {thing}!")
-
-hello("world")`
+// const INITIAL_CODE = `def hello(thing):
+//   print(f"hello, {thing}!")
+//
+// hello("world")`
 
 const SAMPLE_ELICAST = new Elicast(null, 'Sample elicast', [
-  new ElicastText(0, 0, 0, INITIAL_CODE, ''),
-  new ElicastSelection(0, 0, 0)
+  // new ElicastText(0, 0, 0, INITIAL_CODE, ''),
+  // new ElicastSelection(0, 0, 0)
 ], null)
 
 export default {

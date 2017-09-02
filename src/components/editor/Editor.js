@@ -57,6 +57,7 @@ const EDITOR_OPTIONS = {
   lineNumbers: true,
   cursorBlinkRate: 0, // disable default blinker which is not working in no-focus state
   showCursorWhenSelecting: true,
+  indentWithTabs: false,
   autofocus: true
 }
 
@@ -366,8 +367,14 @@ export default {
 
       const lastAppliedOt = this.ots[firstCutOtIdx - 1]
 
-      if (!_.isUndefined(lastAppliedOt._exId)) return  // Not allow "In exercise" state
-      if (!_.isUndefined(lastAppliedOt._assert)) return  // Not allow "In assert" state
+      if (!_.isUndefined(lastAppliedOt._exId)) {
+        alert('You cannot cut inside of exercise')
+        return
+      }
+      if (!_.isUndefined(lastAppliedOt._assert)) {
+        alert('You cannot cut inside of assert')
+        return
+      }
 
       const audioSplitResponse = await axios.post('http://anne.pjknkda.com:7822/audio/split',
         qs.stringify({

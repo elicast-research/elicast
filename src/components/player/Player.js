@@ -240,11 +240,11 @@ export default {
       const solutionOtsLength = (session.exerciseEndIndex - 1) - (session.exerciseStartIndex + 1) + 1
       ElicastOT.replacePartialOts(mockOts, session.exerciseStartIndex + 1, solutionOtsLength, session.solveOts)
 
-      const response = await axios.post('http://anne.pjknkda.com:7822/code/grade/' + this.elicastId,
+      const response = await axios.post('http://anne.pjknkda.com:7822/code/answer/' + this.elicastId,
         qs.stringify({
           ex_id: session.exId,
-          ex_code: 'asdf',
-          code: 'print("asdf")'
+          solve_ots: JSON.stringify(session.solveOts),
+          code: ElicastOT.buildText(mockOts)
         }))
 
       if (response.data.exit_code === 0) {
@@ -257,7 +257,7 @@ export default {
 
         this.ts = this.solveExerciseSession.exerciseEndOt.ts
       } else {
-        // TODO show alert (wrong answer)
+        alert('Wrong answer!')
       }
     },
     skipExercise () {

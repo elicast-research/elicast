@@ -283,6 +283,16 @@ ElicastOT.getPreviousOtForOtType = function (ots, otType, ts) {
   return _.findLast(ots, ot => ot.ts < ts && ot.constructor === otType)
 }
 
+ElicastOT.buildText = function (ots) {
+  let result = ''
+  for (const ot of ots) {
+    if (!(ot instanceof ElicastText)) continue
+    result = [result.substring(0, ot.fromPos), ot.insertedText,
+      result.substring(ot.toPos)].join('')
+  }
+  return result
+}
+
 /*  This function apply given OT to CodeMirror
  *
  *  Args

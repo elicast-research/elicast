@@ -287,8 +287,7 @@ ElicastOT.buildText = function (ots) {
   let result = ''
   for (const ot of ots) {
     if (!(ot instanceof ElicastText)) continue
-    result = [result.substring(0, ot.fromPos), ot.insertedText,
-      result.substring(ot.toPos)].join('')
+    result = result.substring(0, ot.fromPos) + ot.insertedText + result.substring(ot.toPos)
   }
   return result
 }

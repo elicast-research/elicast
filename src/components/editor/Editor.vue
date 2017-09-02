@@ -1,7 +1,35 @@
 <template>
   <div id="editor">
-    <div>
+    <div class="editor-top-wrap">
       <input class="elicast-title" v-model.trim="elicastTitle">
+      <div class="play-status">
+        <span v-show="playMode === PlayMode.PLAYBACK">
+          <i class="fa fa-circle text-info"> Playing...
+            <span v-show="playAreaType === PlayAreaType.EXERCISE"> (Exercise)</span>
+            <span v-show="playAreaType === PlayAreaType.ASSERT"> (Assert)</span>
+          </i>
+        </span>
+        <span v-show="playMode === PlayMode.PAUSE">
+          <i class="fa fa-circle"> Paused
+            <span v-show="playAreaType === PlayAreaType.EXERCISE"> (Exercise)</span>
+            <span v-show="playAreaType === PlayAreaType.ASSERT"> (Assert)</span>
+          </i>
+        </span>
+        <span v-show="playMode === PlayMode.STANDBY ||
+                      playMode === PlayMode.STANDBY_ASSERT">
+          <i class="fa fa-circle text-primary"> Standby
+            <span v-show="playMode === PlayMode.STANDBY_ASSERT"> (Assert)</span>
+          </i>
+        </span>
+        <span v-show="playMode === PlayMode.RECORD ||
+                      playMode === PlayMode.RECORD_EXERCISE ||
+                      playMode === PlayMode.ASSERT">
+          <i class="fa fa-circle text-danger"> Recording...
+            <span v-show="playMode === PlayMode.RECORD_EXERCISE"> (Exercise)</span>
+            <span v-show="playMode === PlayMode.ASSERT"> (Assert)</span>
+          </i>
+        </span>
+      </div>
     </div>
     <div class="code-wrap">
       <codemirror ref="cm"
@@ -22,6 +50,7 @@
             <i class="fa fa-scissors"></i> Cut Here
           </button>
         </div>
+
         <div class="standby-controls code-right-pane-controls"
              v-show="playMode === PlayMode.STANDBY || playMode === PlayMode.STANDBY_ASSERT">
           <button class="btn btn-sm btn-light"
@@ -29,23 +58,25 @@
             <i class="fa fa-pencil-square-o"></i> Record Assert
           </button>
         </div>
+
         <div class="assert-controls code-right-pane-controls"
              v-show="playMode === PlayMode.ASSERT">
-         <button class="btn btn-sm btn-light"
-                :disabled="!playModeReady"
-                @click="runCode">
-           <i class="fa fa-terminal"></i> Run
-         </button>
+          <button class="btn btn-sm btn-light"
+                  :disabled="!playModeReady"
+                  @click="runCode">
+            <i class="fa fa-terminal"></i> Run
+          </button>
           <button class="btn btn-sm btn-light"
                   @click="toggleRecordAssert">
             <i class="fa fa-pencil-square-o"></i> End Assert Recording
           </button>
         </div>
-        <div v-show="playMode === PlayMode.RECORD || playMode === PlayMode.RECORD_EXERCISE"
-             class="record-controls code-right-pane-controls">
+
+        <div class="record-controls code-right-pane-controls"
+             v-show="playMode === PlayMode.RECORD || playMode === PlayMode.RECORD_EXERCISE">
           <button class="btn btn-sm btn-light"
-                 :disabled="!playModeReady"
-                 @click="runCode">
+                  :disabled="!playModeReady"
+                  @click="runCode">
             <i class="fa fa-terminal"></i> Run
           </button>
           <button class="btn btn-sm btn-light"
@@ -69,12 +100,15 @@
               class="btn btn-sm btn-light"
               @click="togglePlayMode"
               :disabled="playMode === PlayMode.RECORD_EXERCISE ||
-                playMode === PlayMode.ASSERT ||
-                playMode === PlayMode.STANDBY_ASSERT ||
-                !playModeReady">
+                         playMode === PlayMode.ASSERT ||
+                         playMode === PlayMode.STANDBY_ASSERT ||
+                         !playModeReady">
         <i v-show="playMode === PlayMode.PAUSE" class="fa fa-play"></i>
         <i v-show="playMode === PlayMode.PLAYBACK" class="fa fa-pause"></i>
-        <i v-show="playMode === PlayMode.STANDBY" class="fa fa-video-camera"></i>
+        <i v-show="playMode === PlayMode.STANDBY ||
+                   playMode === PlayMode.STANDBY_ASSERT"
+          :disable="playMode === PlayMode.STANDBY_ASSERT"
+          class="fa fa-video-camera"></i>
         <i v-show="playMode.isRecording()" class="fa fa-video-camera text-danger"></i>
       </button>
 
@@ -96,6 +130,10 @@
 
 <style lang="scss">
 
+.editor-top-wrap {
+  position: relative;
+}
+
 .elicast-title {
   max-width: 100%;
   margin: 0;
@@ -110,6 +148,13 @@
   display: inline-block;
   font-size: 2rem;
   width: 100%;
+}
+
+.play-status {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  z-index: 100;
 }
 
 .record-controls button {

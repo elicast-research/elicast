@@ -1,4 +1,5 @@
-import ElicastOT, { ElicastNop, ElicastSelection, ElicastText, ElicastRun, ElicastAssert } from '@/elicast/elicast-ot'
+import ElicastOT, { ElicastNop, ElicastSelection, ElicastText,
+  ElicastExercise, ElicastRun, ElicastAssert } from '@/elicast/elicast-ot'
 import Elicast from '@/elicast/elicast'
 import RecordExerciseSession from './record-exercise-session'
 import RecordAssertSession from './record-assert-session'
@@ -35,6 +36,20 @@ class PlayMode {
   }
 }
 
+class PlayAreaType {
+  static TEXT = new PlayAreaType('text')
+  static EXERCISE = new PlayAreaType('exercise')
+  static ASSERT = new PlayAreaType('assert')
+
+  constructor (name) {
+    this.name = name
+  }
+
+  toString () {
+    return this.name
+  }
+}
+
 const EDITOR_OPTIONS = {
   mode: 'python',
   theme: 'solarized',
@@ -58,6 +73,7 @@ export default {
   data () {
     return {
       PlayMode,
+      PlayAreaType,
 
       code: '',
       elicastId: this.elicast ? this.elicast.id : null,
@@ -65,6 +81,7 @@ export default {
       ots: this.elicast ? this.elicast.ots : [],
       ts: -1,
       playMode: PlayMode.STANDBY,
+      playAreaType: PlayAreaType.TEXT,
       playModeReady: true,
       maxTs: 0,
       recordStartOt: null,
@@ -149,6 +166,11 @@ export default {
           shouldRedrawAssertAreas = true
         } else if (ot instanceof ElicastRun) {
           shouldRedrawRunOutput = true
+        } else if (ot instanceof ElicastExercise) {
+          this.playAreaType = this.playAreaType === PlayAreaType.TEXT
+            ? PlayAreaType.EXERCISE : PlayAreaType.TEXT
+        } else if (ot instanceof ElicastAssert) {
+          this.playAreaType = PlayAreaType.ASSERT
         }
       }
       // prevOtIdx > newOtIdx
@@ -161,6 +183,11 @@ export default {
           shouldRedrawAssertAreas = true
         } else if (ot instanceof ElicastRun) {
           shouldRedrawRunOutput = true
+        } else if (ot instanceof ElicastExercise) {
+          this.playAreaType = this.playAreaType === PlayAreaType.TEXT
+            ? PlayAreaType.EXERCISE : PlayAreaType.TEXT
+        } else if (ot instanceof ElicastAssert) {
+          this.playAreaType = PlayAreaType.TEXT
         }
       }
 
@@ -185,9 +212,8 @@ export default {
       // restore selection
       this.redrawSelection()
       if (ts === this.maxTs) {
-        // FIXME: make below loop into true/false global status
-        this.playMode = this.ots.findIndex(ot => ot instanceof ElicastAssert) === -1
-          ? PlayMode.STANDBY : PlayMode.STANDBY_ASSERT
+        this.playMode = this.playAreaType === PlayAreaType.ASSERT
+          ? PlayMode.STANDBY_ASSERT : PlayMode.STANDBY
       }
     },
 

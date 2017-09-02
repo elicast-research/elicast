@@ -138,6 +138,14 @@ export default {
         }
       }
       // prevOtIdx > newOtIdx
+      // revert solveOts before ots is reverted
+      const prevOt = this.ots[prevOtIdx]
+      if (!isBigJump && prevOtIdx > newOtIdx && prevOt instanceof ElicastExercise && !prevOt._solved) {
+        _.forEachRight(this.solveExerciseSession.solveOts, ot => {
+          ElicastOT.revertOtToCM(this.cm, ot)
+        })
+      }
+
       for (let i = prevOtIdx; i > newOtIdx && i >= 0; i--) {
         const ot = this.ots[i]
 
@@ -160,7 +168,11 @@ export default {
 
       // restore exercise areas
       if (shouldRedrawExerciseAreas) {
-        ElicastOT.redrawExerciseAreas(this.cm, this.ots.slice(0, newOtIdx + 1))
+        if (!_.isNil(this.solveExerciseSession) && this.ots[newOtIdx] instanceof ElicastExercise && !this.ots[newOtIdx]._solved) {
+          ElicastOT.redrawExerciseAreas(this.cm, _.concat(this.ots.slice(0, newOtIdx + 1), this.solveExerciseSession.solveOts))
+        } else {
+          ElicastOT.redrawExerciseAreas(this.cm, this.ots.slice(0, newOtIdx + 1))
+        }
       }
 
       // restore run output
@@ -216,8 +228,6 @@ export default {
 
         clearTimeout(this.playbackTimer)
         this.playbackTimer = -1
-      } else if (prevPlayMode === PlayMode.SOLVE_EXERCISE) {
-        ElicastOT.restoreCMToTs(this.cm, this.ots, this.ts)
       }
 
       _.defer(() => {
@@ -295,6 +305,7 @@ export default {
         ElicastOT.restoreCMToTs(this.cm, this.ots, this.ts)
 
         this.ts = this.solveExerciseSession.exerciseEndOt.ts
+        this.solveExerciseSession = null
       } else {
         alert('Wrong answer!')
       }

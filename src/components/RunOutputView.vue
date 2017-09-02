@@ -49,8 +49,8 @@ export default {
   },
 
   watch: {
-    output (output) {
-      this.maximize()
+    output (output, prevOutput) {
+      if (output && output.length) this.maximize()
     }
   },
 

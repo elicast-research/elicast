@@ -15,49 +15,49 @@
       </codemirror>
 
       <div class="code-right-pane">
-        <div class="record-controls">
-          <div v-show="playMode === PlayMode.PAUSE">
-            <button class="btn btn-sm btn-light"
-                   @click="cutOts">
-              <i class="fa fa-scissors"></i> Cut Here
-            </button>
-          </div>
-          <div v-show="playMode === PlayMode.STANDBY ||
-               playMode === PlayMode.STANDBY_ASSERT ||
-               playMode === PlayMode.ASSERT">
-            <button class="btn btn-sm btn-light"
-                    @click="toggleRecordAssert">
-               <span v-show="playMode === PlayMode.ASSERT">
-                 <i class="fa fa-pencil-square-o"></i> End Assert Recording
-               </span>
-               <span v-show="playMode === PlayMode.STANDBY">
-                 <i class="fa fa-pencil-square-o"></i> Record Assert
-               </span>
-               <span v-show="playMode === PlayMode.STANDBY_ASSERT">
-                 <i class="fa fa-pencil-square-o"></i> Record Assert
-               </span>
-            </button>
-          </div>
-          <div v-show="playMode.isRecording()">
-            <button class="btn btn-sm btn-light"
-                   :disabled="!playModeReady"
-                   @click="runCode">
-              <i class="fa fa-terminal"></i> Run
-            </button>
-
-            <button class="btn btn-sm btn-light"
-                    v-show="playMode === PlayMode.RECORD ||
-                         playMode === PlayMode.RECORD_EXERCISE"
-                    @click="toggleRecordExercise"
-                    :disabled="!playModeReady">
-              <span v-show="playMode === PlayMode.RECORD">
-                <i class="fa fa-pencil-square-o"></i> Record Exercise
-              </span>
-              <span v-show="playMode === PlayMode.RECORD_EXERCISE">
-                <i class="fa fa-pencil-square-o"></i> End Exercise Recording
-              </span>
-            </button>
-          </div>
+        <div class="pause-controls code-right-pane-controls"
+             v-show="playMode === PlayMode.PAUSE">
+          <button class="btn btn-sm btn-light"
+                  @click="cutOts">
+            <i class="fa fa-scissors"></i> Cut Here
+          </button>
+        </div>
+        <div class="standby-controls code-right-pane-controls"
+             v-show="playMode === PlayMode.STANDBY || playMode === PlayMode.STANDBY_ASSERT">
+          <button class="btn btn-sm btn-light"
+                  @click="toggleRecordAssert">
+            <i class="fa fa-pencil-square-o"></i> Record Assert
+          </button>
+        </div>
+        <div class="assert-controls code-right-pane-controls"
+             v-show="playMode === PlayMode.ASSERT">
+         <button class="btn btn-sm btn-light"
+                :disabled="!playModeReady"
+                @click="runCode">
+           <i class="fa fa-terminal"></i> Run
+         </button>
+          <button class="btn btn-sm btn-light"
+                  @click="toggleRecordAssert">
+            <i class="fa fa-pencil-square-o"></i> End Assert Recording
+          </button>
+        </div>
+        <div v-show="playMode === PlayMode.RECORD || playMode === PlayMode.RECORD_EXERCISE"
+             class="record-controls code-right-pane-controls">
+          <button class="btn btn-sm btn-light"
+                 :disabled="!playModeReady"
+                 @click="runCode">
+            <i class="fa fa-terminal"></i> Run
+          </button>
+          <button class="btn btn-sm btn-light"
+                  @click="toggleRecordExercise"
+                  :disabled="!playModeReady">
+            <span v-show="playMode === PlayMode.RECORD">
+              <i class="fa fa-pencil-square-o"></i> Record Exercise
+            </span>
+            <span v-show="playMode === PlayMode.RECORD_EXERCISE">
+              <i class="fa fa-pencil-square-o"></i> End Exercise Recording
+            </span>
+          </button>
         </div>
 
         <RunOutputView :output="runOutput"></RunOutputView>
@@ -112,30 +112,13 @@
   width: 100%;
 }
 
-.record-controls {
-  display: flex;
-  flex-direction: row;
-  align-items: flex-end;
-  justify-content: flex-end;
+.record-controls button {
+  background-color: transparentize(red, .925);
+  border-color: transparent;
 
-  & > * {
-    margin: 0 0.25rem;
-
-    &:last-child {
-      margin-right: 0;
-    }
-  }
-
-  button {
-    cursor: pointer;
-
-    background-color: transparentize(red, .925);
-    border-color: transparent;
-
-    &:hover {
-      background-color: transparentize(red, 0.85);
-      border-color: transparentize(red, 0.85);
-    }
+  &:hover {
+    background-color: transparentize(red, 0.85);
+    border-color: transparentize(red, 0.85);
   }
 }
 

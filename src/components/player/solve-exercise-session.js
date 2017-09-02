@@ -9,18 +9,26 @@ export default class SolveExerciseSession {
     this.ots = ots
     this.exerciseStartOt = exerciseStartOt
     this.exerciseStartIndex = ots.indexOf(exerciseStartOt)
+    this.exerciseEndOt = ots.find((ot, idx) =>
+      idx > this.exerciseStartIndex && ot instanceof ElicastExercise)
+    this.exerciseEndIndex = ots.indexOf(this.exerciseEndOt)
     this.solveOts = []
   }
 
   start () {
-    this.solveOts.push(new ElicastNop(this.exerciseStartOt.ts))
+    this.solveOts.push(new ElicastNop(this.getTs()))
   }
 
   finish () {
-    const ts = this.getRelativeTS()
-    this.solveOts.push(new ElicastNop(ts))
+    this.solveOts.push(new ElicastNop(this.getTs()))
 
-    // TODO replace exercise OTs with solveOts
+    this.exerciseStartOt._solved = true
+    this.exerciseEndOt._solved = true
+
+    // set _exId for every ot in solveOts
+    this.solveOts.forEach(ot => {
+      ot._exId = this.exId
+    })
   }
 
   /**
@@ -37,9 +45,8 @@ export default class SolveExerciseSession {
     this.solveOts.push(ot)
   }
 
-  getRelativeTS () {
-    if (this.solveOts.length === 0) throw new Error('Session not started!')
-    return this.solveOts[0].getRelativeTS()
+  getTs () {
+    return Math.round((this.exerciseStartOt.ts + this.exerciseEndOt.ts) / 2)
   }
 
   getFirstExerciseTextOt () {

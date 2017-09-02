@@ -331,6 +331,15 @@ ElicastOT.revertOtToCM = function (cm, ot) {
   }
 }
 
+ElicastOT.restoreCMToTs = function (cm, ots, ts) {
+  cm.doc.setValue('')
+  let newOtIdx = ots.findIndex(ot => ts < ot.ts)
+  newOtIdx = (newOtIdx < 0 ? ots.length : newOtIdx) - 1
+  for (let i = 0; i <= newOtIdx; i++) {
+    ElicastOT.applyOtToCM(cm, ots[i])
+  }
+}
+
 ElicastOT.redrawExerciseAreas = function (cm, ots) {
   cm.doc.getAllMarks()
     .filter(marker => marker.className === 'exercise-block')
@@ -370,7 +379,7 @@ ElicastOT.clearRecordingExerciseArea = function (cm) {
 
 ElicastOT.redrawSolveExerciseArea = function (cm, solveOts) {
   cm.doc.getAllMarks()
-    .filter(marker => marker.className === 'exercise-block')
+    .filter(marker => marker.className === 'solve-exercise-block')
     .forEach(marker => marker.clear())
 
   const cmContent = cm.doc.getValue()
@@ -378,7 +387,7 @@ ElicastOT.redrawSolveExerciseArea = function (cm, solveOts) {
   getAreas(solveOts).forEach(area => {
     const fromLineCh = posToLineCh(cmContent, area.fromPos)
     const toLineCh = posToLineCh(cmContent, area.toPos)
-    cm.doc.markText(fromLineCh, toLineCh, { className: 'exercise-block' })
+    cm.doc.markText(fromLineCh, toLineCh, { className: 'solve-exercise-block' })
   })
 }
 
@@ -522,12 +531,40 @@ ElicastOT.isChangeAllowedForSolveExercise = function (ots, recordExerciseSession
     return firstExerciseTextOt.fromPos <= fromPos && toPos <= firstExerciseTextOt.toPos
   } else {
     // within solving area
-    const areas = getAreas(recordExerciseSession.solveOts)
-    if (areas.length !== 1 || areas[0].type !== ElicastOTAreaSet.TEXT) {
+    const areas = getAreas(recordExerciseSession.solveOts, ElicastOTAreaSet.EXERCISE_BUILD)
+    if (areas.length !== 1) {
       throw new Error('Invalid solve area')
     }
 
     const solveArea = areas[0]
     return solveArea.fromPos <= fromPos && toPos <= solveArea.toPos
+  }
+}
+
+ElicastOT.replacePartialOts = function (ots, startIdx, amount, newOts) {
+  const newOtsArea = getAreas(newOts).pop() // only support one area
+  const newOtsAreaLength = newOtsArea.toPos - newOtsArea.fromPos
+
+  ots.splice(startIdx, amount, ...newOts)
+
+  for (let i = startIdx + newOts.length; i < ots.length; i++) {
+    const ot = ots[i]
+    switch (ot.constructor) {
+      case ElicastText:
+        if (ot.fromPos > newOtsArea.fromPos) {
+          ot.fromPos += newOtsAreaLength
+          ot.toPos += newOtsAreaLength
+        }
+        break
+      case ElicastSelection:
+        // TODO need to calculate using replaced area
+        // if (ot.fromPos > newOtsArea.fromPos) {
+        //   ot.fromPos += newOtsArea
+        // }
+        // if (ot.toPos > newOtsArea.fromPos) {
+        //
+        // }
+        break
+    }
   }
 }

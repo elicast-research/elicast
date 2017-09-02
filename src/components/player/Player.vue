@@ -15,12 +15,31 @@
       </codemirror>
 
       <div class="code-right-pane">
-        <div class="pause-controls"
+        <div class="pause-controls code-right-pane-controls"
              v-show="playMode === PlayMode.PAUSE">
-         <button class="run-code-button btn btn-sm btn-light"
+          <button class="run-code-button btn btn-sm btn-light"
                  :disabled="!playModeReady"
                  @click="runCode">
             <i class="fa fa-terminal"></i> Run
+          </button>
+        </div>
+
+        <div class="solve-control code-right-pane-controls"
+             v-show="playMode === PlayMode.SOLVE_EXERCISE">
+          <button class="run-code-button btn btn-sm btn-primary"
+                :disabled="!playModeReady"
+                @click="runCode">
+            <i class="fa fa-terminal"></i> Run
+          </button>
+          <button class="check-answer-button btn btn-sm btn-success"
+                  :disabled="!playModeReady"
+                  @click="checkAnswer">
+            <i class="fa fa-pencil"></i> Check Answer
+          </button>
+          <button class="check-answer-button btn btn-sm btn-light"
+                  :disabled="!playModeReady"
+                  @click="skipExercise">
+            <i class="fa fa-forward"></i> Skip Exercise
           </button>
         </div>
 
@@ -35,6 +54,7 @@
               :disabled="playMode === PlayMode.SOLVE_EXERCISE || !playModeReady">
         <i v-show="playMode === PlayMode.PAUSE && ts !== maxTs" class="fa fa-play"></i>
         <i v-show="playMode === PlayMode.PLAYBACK" class="fa fa-pause"></i>
+        <i v-show="playMode === PlayMode.SOLVE_EXERCISE" class="fa fa-pause"></i>
         <i v-show="playMode === PlayMode.PAUSE && ts === maxTs" class="fa fa-repeat"></i>
       </button>
 
@@ -69,27 +89,6 @@
   display: inline-block;
   font-size: 2rem;
   width: 100%;
-}
-
-.pause-controls {
-  display: flex;
-  flex-direction: row;
-  align-items: flex-end;
-  justify-content: flex-end;
-
-  & > * {
-    margin: 0 0.25rem;
-
-    &:last-child {
-      margin-right: 0;
-    }
-  }
-
-  button {
-    cursor: pointer;
-
-    border: 1px solid rgba(0, 0, 0, 0.125);
-  }
 }
 
 .CodeMirror {

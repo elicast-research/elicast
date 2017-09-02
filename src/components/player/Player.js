@@ -155,12 +155,7 @@ export default {
           this.ts = 0
         } else {
           // restore code
-          this.cm.doc.setValue('')
-          let newOtIdx = this.ots.findIndex(ot => this.ts < ot.ts)
-          newOtIdx = (newOtIdx < 0 ? this.ots.length : newOtIdx) - 1
-          for (let i = 0; i <= newOtIdx; i++) {
-            ElicastOT.applyOtToCM(this.cm, this.ots[i])
-          }
+          ElicastOT.restoreCMToTs(this.cm, this.ots, this.ts)
           // restore selection
           this.redrawSelection()
           // restore run output
@@ -228,12 +223,39 @@ export default {
       }
     },
     async runCode () {
+      const runStartOT = new ElicastRun(0)
+      this.redrawRunOutput(runStartOT)
+
       const response = await axios.post('http://anne.pjknkda.com:7822/code/run', qs.stringify({
         code: this.code
       }))
 
       const runResultOT = new ElicastRun(0, response.data.exit_code, response.data.output)
       this.redrawRunOutput(runResultOT)
+    },
+    checkAnswer () {
+      const session = this.solveExerciseSession
+
+      // TODO deep copy this.ots
+      const solutionOtsLength = (session.exerciseEndIndex - 1) - (session.exerciseStartIndex + 1) + 1
+      ElicastOT.replacePartialOts(this.ots, session.exerciseStartIndex + 1, solutionOtsLength, session.solveOts)
+
+      // TODO check answer
+
+      // if correct
+      this.solveExerciseSession.finish()
+
+      this.playMode = PlayMode.PAUSE
+      ElicastOT.restoreCMToTs(this.cm, this.ots, this.ts)
+
+      this.ts = this.solveExerciseSession.exerciseEndOt.ts
+
+      // else
+      // TODO show alert (wrong answer)
+    },
+    skipExercise () {
+      this.solveExerciseSession.finish()
+      this.playMode = PlayMode.PLAYBACK
     },
     handleEditorBeforeChange (cm, changeObj) {
       if (this.playMode !== PlayMode.SOLVE_EXERCISE) return
@@ -244,7 +266,7 @@ export default {
         return
       }
 
-      const ts = this.solveExerciseSession.getRelativeTS()
+      const ts = this.solveExerciseSession.getTs()
       const newOT = ElicastOT.makeOTFromCMChange(cm, changeObj, ts)
       this.solveExerciseSession.pushSolveOt(newOT)
     },
@@ -268,9 +290,9 @@ export default {
         newOtIdx = (newOtIdx < 0 ? this.ots.length : newOtIdx) - 1
 
         for (let i = prevOtIdx; i <= newOtIdx; i++) {
-          if (this.ots[i] instanceof ElicastExercise) {
-            // TODO if solved, let it pass
-            val = this.ots[i].ts
+          const ot = this.ots[i]
+          if (ot instanceof ElicastExercise && !ot._solved) {
+            val = ot.ts - 1
             break
           }
         }

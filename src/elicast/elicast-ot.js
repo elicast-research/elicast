@@ -29,6 +29,10 @@ export default class ElicastOT {
   static fromJSON (otRaw) {
     return OT_CLASS_MAP[otRaw.command].fromJSON(otRaw)
   }
+
+  clone () {
+    return Object.assign(ElicastOT.fromJSON(this), this)  // assign to preserve _attributes
+  }
 }
 
 export class ElicastNop extends ElicastOT {
@@ -521,18 +525,18 @@ ElicastOT.isChangeAllowedForRecordExercise = function (ots, recordExerciseSessio
   return exArea.fromPos <= fromPos && toPos <= exArea.toPos
 }
 
-ElicastOT.isChangeAllowedForSolveExercise = function (ots, recordExerciseSession, cm, changeObj) {
+ElicastOT.isChangeAllowedForSolveExercise = function (ots, solveExerciseSession, cm, changeObj) {
   const cmContent = cm.doc.getValue()
   const fromPos = lineChToPos(cmContent, changeObj.from)
   const toPos = lineChToPos(cmContent, changeObj.to)
 
-  if (!recordExerciseSession.isInitiated()) {
+  if (!solveExerciseSession.isInitiated()) {
     // first text ot for solve exercise
-    const firstExerciseTextOt = recordExerciseSession.getFirstExerciseTextOt()
+    const firstExerciseTextOt = solveExerciseSession.getFirstExerciseTextOt()
     return firstExerciseTextOt.fromPos <= fromPos && toPos <= firstExerciseTextOt.toPos
   } else {
     // within solving area
-    const areas = getAreas(recordExerciseSession.solveOts, ElicastOTAreaSet.EXERCISE_BUILD)
+    const areas = getAreas(solveExerciseSession.solveOts, ElicastOTAreaSet.EXERCISE_BUILD)
     if (areas.length !== 1) {
       throw new Error('Invalid solve area')
     }
@@ -543,6 +547,8 @@ ElicastOT.isChangeAllowedForSolveExercise = function (ots, recordExerciseSession
 }
 
 ElicastOT.replacePartialOts = function (ots, startIdx, amount, newOts) {
+  const oriOtsArea = getAreas(ots.slice(startIdx, startIdx + amount)).pop()
+  const oriOtsAreaLength = oriOtsArea.toPos - oriOtsArea.fromPos
   const newOtsArea = getAreas(newOts).pop() // only support one area
   const newOtsAreaLength = newOtsArea.toPos - newOtsArea.fromPos
 
@@ -552,19 +558,23 @@ ElicastOT.replacePartialOts = function (ots, startIdx, amount, newOts) {
     const ot = ots[i]
     switch (ot.constructor) {
       case ElicastText:
-        if (ot.fromPos > newOtsArea.fromPos) {
-          ot.fromPos += newOtsAreaLength
-          ot.toPos += newOtsAreaLength
+        if (ot.fromPos >= oriOtsArea.toPos) {
+          ot.fromPos += newOtsAreaLength - oriOtsAreaLength
+          ot.toPos += newOtsAreaLength - oriOtsAreaLength
         }
         break
       case ElicastSelection:
-        // TODO need to calculate using replaced area
-        // if (ot.fromPos > newOtsArea.fromPos) {
-        //   ot.fromPos += newOtsArea
-        // }
-        // if (ot.toPos > newOtsArea.fromPos) {
-        //
-        // }
+        if (oriOtsArea.toPos <= ot.fromPos) {
+          ot.fromPos += newOtsAreaLength - oriOtsAreaLength
+          ot.toPos += newOtsAreaLength - oriOtsAreaLength
+        } else if (ot.fromPos <= oriOtsArea.fromPos && oriOtsArea.toPos <= ot.toPos) {
+          ot.toPos += newOtsAreaLength - oriOtsAreaLength
+        } else if (oriOtsArea.fromPos <= ot.fromPos && ot.fromPos < oriOtsArea.toPos &&
+                   oriOtsArea.fromPos < ot.toPos) {
+          ot.fromPos = newOtsArea.toPos
+        } else if (oriOtsArea.fromPos < ot.toPos && ot.toPos <= oriOtsArea.toPos) {
+          ot.toPos = newOtsArea.fromPos
+        }
         break
     }
   }

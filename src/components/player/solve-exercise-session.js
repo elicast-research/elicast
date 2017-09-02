@@ -7,6 +7,7 @@ export default class SolveExerciseSession {
     if (!(exerciseStartOt instanceof ElicastExercise)) throw new Error('Invalid start ot')
 
     this.ots = ots
+    this.exId = exerciseStartOt.exId
     this.exerciseStartOt = exerciseStartOt
     this.exerciseStartIndex = ots.indexOf(exerciseStartOt)
     this.exerciseEndOt = ots.find((ot, idx) =>

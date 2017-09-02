@@ -1,7 +1,6 @@
 <template>
   <div id="player">
     <div>
-      <span v-show="elicastId !== null">(ID-{{ elicastId }})</span>
       <span class="elicast-title">{{ elicastTitle }}</span>
     </div>
 

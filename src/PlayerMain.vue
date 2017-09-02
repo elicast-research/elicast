@@ -2,12 +2,11 @@
   <div class="container">
     <div class="top-controls">
       <button class="btn btn-sm btn-light"
-              @click="showLoadSaveModal">Load/Save</button>
+              @click="showLoadSaveModal">Load</button>
     </div>
     <h5>/* Elicast */</h5>
     <component ref="playerPlaceholder" :is="currentPlayer"></component>
     <LoadSaveModal ref="loadSaveModal"
-                   :enableRemoveButton="true"
                    @elicastLoaded="loadSaveModalElicastLoaded"></LoadSaveModal>
   </div>
 </template>

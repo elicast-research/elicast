@@ -233,25 +233,32 @@ export default {
       const runResultOT = new ElicastRun(0, response.data.exit_code, response.data.output)
       this.redrawRunOutput(runResultOT)
     },
-    checkAnswer () {
+    async checkAnswer () {
       const session = this.solveExerciseSession
 
-      // TODO deep copy this.ots
+      const mockOts = this.ots.map(ot => ot.clone())
       const solutionOtsLength = (session.exerciseEndIndex - 1) - (session.exerciseStartIndex + 1) + 1
-      ElicastOT.replacePartialOts(this.ots, session.exerciseStartIndex + 1, solutionOtsLength, session.solveOts)
+      ElicastOT.replacePartialOts(mockOts, session.exerciseStartIndex + 1, solutionOtsLength, session.solveOts)
 
-      // TODO check answer
+      const response = await axios.post('http://anne.pjknkda.com:7822/code/grade/' + this.elicastId,
+        qs.stringify({
+          ex_id: session.exId,
+          ex_code: 'asdf',
+          code: 'print("asdf")'
+        }))
 
-      // if correct
-      this.solveExerciseSession.finish()
+      if (response.data.exit_code === 0) {
+        ElicastOT.replacePartialOts(this.ots, session.exerciseStartIndex + 1, solutionOtsLength, session.solveOts)
 
-      this.playMode = PlayMode.PAUSE
-      ElicastOT.restoreCMToTs(this.cm, this.ots, this.ts)
+        this.solveExerciseSession.finish()
 
-      this.ts = this.solveExerciseSession.exerciseEndOt.ts
+        this.playMode = PlayMode.PAUSE
+        ElicastOT.restoreCMToTs(this.cm, this.ots, this.ts)
 
-      // else
-      // TODO show alert (wrong answer)
+        this.ts = this.solveExerciseSession.exerciseEndOt.ts
+      } else {
+        // TODO show alert (wrong answer)
+      }
     },
     skipExercise () {
       this.solveExerciseSession.finish()

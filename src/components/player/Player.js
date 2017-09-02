@@ -1,4 +1,4 @@
-import ElicastOT, { ElicastText, ElicastSelection, ElicastRun, ElicastExercise } from '@/elicast/elicast-ot'
+import ElicastOT, { ElicastText, ElicastSelection, ElicastRun, ElicastExercise, ElicastAssert } from '@/elicast/elicast-ot'
 import SolveExerciseSession from './solve-exercise-session'
 import Slider from '@/components/Slider'
 import RunOutputView from '@/components/RunOutputView'
@@ -224,7 +224,12 @@ export default {
     this.cm = this.$refs.cm.editor
     this.cm.on('mousedown', this.handleEditorMousedown)
 
-    this.maxTs = this.ots.length && this.ots[this.ots.length - 1].ts
+    if (!this.ots.length) {
+      this.maxTs = 0
+    } else {
+      let assertIdx = this.ots.findIndex(ot => ot instanceof ElicastAssert)
+      this.maxTs = assertIdx < 0 ? this.ots[this.ots.length - 1].ts : this.ots[assertIdx - 1].ts
+    }
     this.ts = 0
   },
 

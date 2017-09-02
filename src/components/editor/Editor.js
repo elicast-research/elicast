@@ -170,7 +170,8 @@ export default {
           this.playAreaType = this.playAreaType === PlayAreaType.TEXT
             ? PlayAreaType.EXERCISE : PlayAreaType.TEXT
         } else if (ot instanceof ElicastAssert) {
-          this.playAreaType = PlayAreaType.ASSERT
+          this.playAreaType = this.playAreaType === PlayAreaType.TEXT
+            ? PlayAreaType.ASSERT : PlayAreaType.TEXT
         }
       }
       // prevOtIdx > newOtIdx
@@ -187,7 +188,8 @@ export default {
           this.playAreaType = this.playAreaType === PlayAreaType.TEXT
             ? PlayAreaType.EXERCISE : PlayAreaType.TEXT
         } else if (ot instanceof ElicastAssert) {
-          this.playAreaType = PlayAreaType.TEXT
+          this.playAreaType = this.playAreaType === PlayAreaType.TEXT
+            ? PlayAreaType.ASSERT : PlayAreaType.TEXT
         }
       }
 

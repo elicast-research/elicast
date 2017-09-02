@@ -12,6 +12,7 @@ import 'codemirror/mode/python/python'
 import _ from 'lodash'
 import axios from 'axios'
 import blobUtil from 'blob-util'
+import moment from 'moment'
 import qs from 'qs'
 
 class PlayMode {
@@ -116,12 +117,7 @@ export default {
       return this.playMode === PlayMode.ASSERT
     },
     tsDisplay () {
-      // TODO use moment.js
-      const hour = Math.floor(this.ts / 1000 / 60 / 60)
-      const min = Math.floor((this.ts / 1000 / 60) % 60)
-      const sec = Math.floor((this.ts / 1000) % 60)
-      return [hour, [min, String(sec).padStart(2, '0')].join(':')]
-        .filter(Boolean).join(':')
+      return moment(this.ts).format('m:ss') + ' / ' + moment(this.maxTs).format('m:ss')
     },
     sliderColor () {
       return this.playMode.isRecording() ? 'red' : 'black'
@@ -214,8 +210,9 @@ export default {
       // restore selection
       this.redrawSelection()
       if (ts === this.maxTs) {
-        this.playMode = this.playAreaType === PlayAreaType.ASSERT
-          ? PlayMode.STANDBY_ASSERT : PlayMode.STANDBY
+        // FIXME: make below loop into true/false global status
+        this.playMode = this.ots.findIndex(ot => ot instanceof ElicastAssert) === -1
+          ? PlayMode.STANDBY : PlayMode.STANDBY_ASSERT
       }
     },
 

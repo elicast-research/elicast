@@ -175,7 +175,8 @@ const OT_CLASS_MAP = _.keyBy([
   ElicastText,
   ElicastExercise,
   ElicastExerciseShow,
-  ElicastRun
+  ElicastRun,
+  ElicastAssert
 ], otClass => otClass.COMMAND)
 
 /*  This function convert position in `content` to line/ch

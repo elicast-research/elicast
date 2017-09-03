@@ -205,6 +205,15 @@ export default {
           this.solveExerciseSession.start()
         }
 
+        // apply ots until it reaches the first ElicastText ot
+        for (let i = 0; i < this.ots.length; i++) {
+          const ot = this.ots[i]
+          if (ot.ts > this.ts && ot._exId) {
+            if (ot instanceof ElicastText) break
+            ElicastOT.applyOtToCM(this.cm, ot)
+          }
+        }
+
         // apply previous solveOts before playMode changes to SOLVE_EXERCISE
         this.solveExerciseSession.solveOts
           .filter(ot => ot instanceof ElicastText)

@@ -148,6 +148,10 @@ export class ElicastRun extends ElicastOT {
     this.output = output
   }
 
+  isRunning () {
+    return _.isNil(this.exitCode)
+  }
+
   static fromJSON (ot) {
     return new this(ot.ts, ot.exitCode, ot.output)
   }

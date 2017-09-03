@@ -120,22 +120,7 @@ export default {
         } else if (ot instanceof ElicastRun) {
           shouldRedrawRunOutput = true
         } else if (ot instanceof ElicastExercise && !ot._solved) {
-          // start solve exercise
-          if (_.isNil(this.solveExerciseSession)) {
-            this.solveExerciseSession = new SolveExerciseSession(this.ots, ot)
-            this.solveExerciseSession.start()
-          }
-
-          // apply previous solveOts before playMode changes to SOLVE_EXERCISE
-          this.solveExerciseSession.solveOts.forEach(ot => {
-            if (ot instanceof ElicastText) {
-              ElicastOT.applyOtToCM(this.cm, ot)
-            }
-          })
-          ElicastOT.redrawSolveExerciseArea(this.cm, this.solveExerciseSession.solveOts)
-
           this.playMode = PlayMode.SOLVE_EXERCISE
-          // dirty will become true
         }
       }
 
@@ -213,6 +198,19 @@ export default {
       }
 
       if (playMode === PlayMode.SOLVE_EXERCISE) {
+        if (_.isNil(this.solveExerciseSession)) {
+          const exerciseStartOt = _.findLast(this.ots,
+            ot => ot.ts <= this.ts && ot instanceof ElicastExercise)
+          this.solveExerciseSession = new SolveExerciseSession(this.ots, exerciseStartOt)
+          this.solveExerciseSession.start()
+        }
+
+        // apply previous solveOts before playMode changes to SOLVE_EXERCISE
+        this.solveExerciseSession.solveOts
+          .filter(ot => ot instanceof ElicastText)
+          .forEach(ot => ElicastOT.applyOtToCM(this.cm, ot))
+
+        ElicastOT.redrawSolveExerciseArea(this.cm, this.solveExerciseSession.solveOts)
         this.dirty = true
       }
 
@@ -252,7 +250,7 @@ export default {
     redrawRunOutput (runOt) {
       runOt = runOt || ElicastOT.getPreviousOtForOtType(this.ots, ElicastRun, this.ts)
       if (runOt) {
-        this.runOutput = runOt.output || '/* running... */'
+        this.runOutput = runOt.isRunning() ? '/* running... */' : runOt.output
       } else {
         this.runOutput = ''
       }
@@ -301,6 +299,7 @@ export default {
     },
     handleEditorBeforeChange (cm, changeObj) {
       if (this.playMode !== PlayMode.SOLVE_EXERCISE) return
+      if (!changeObj.origin) return // ignore restoring solveOts
 
       if (!ElicastOT.isChangeAllowedForSolveExercise(this.ots, this.solveExerciseSession, cm, changeObj)) {
         console.warn('Editing non-editable area')

@@ -398,15 +398,28 @@ export default {
       const lastAppliedOt = this.ots[firstCutOtIdx - 1]
 
       if (!_.isUndefined(lastAppliedOt._exId)) {
-        alert('You cannot cut inside of exercise')
+        this.$refs.toast.show({
+          class: ['alert', 'alert-warning'],
+          content: 'You cannot cut inside of exercise!',
+          lifespan: 2000
+        })
         return
       }
       if (!_.isUndefined(lastAppliedOt._assert)) {
-        alert('You cannot cut inside of assert')
+        this.$refs.toast.show({
+          class: ['alert', 'alert-warning'],
+          content: 'You cannot cut inside of assert!',
+          lifespan: 2000
+        })
         return
       }
 
       this.playModeReady = false
+
+      const toast = this.$refs.toast.show({
+        class: ['alert', 'alert-warning'],
+        content: '<i class="fa fa-scissors"></i> Cutting...'
+      })
 
       const audioSplitResponse = await axios.post('http://anne.pjknkda.com:7822/audio/split',
         qs.stringify({
@@ -421,6 +434,8 @@ export default {
       this.ots.splice(firstCutOtIdx, this.ots.length - firstCutOtIdx)
       this.ots.push(new ElicastNop(this.ts + 1))  // Trick to invoke ts update
       this.ts += 1
+
+      this.$refs.toast.remove(toast)
 
       this.playModeReady = true
     },

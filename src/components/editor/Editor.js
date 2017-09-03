@@ -362,7 +362,7 @@ export default {
     redrawRunOutput (runOt) {
       runOt = runOt || ElicastOT.getPreviousOtForOtType(this.ots, ElicastRun, this.ts)
       if (runOt) {
-        this.runOutput = runOt.output || '/* running... */'
+        this.runOutput = runOt.isRunning() ? '/* running... */' : runOt.output
       } else {
         this.runOutput = ''
       }

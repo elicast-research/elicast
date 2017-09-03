@@ -196,6 +196,9 @@ export default {
 
   canvas {
     cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
   }
 
 }

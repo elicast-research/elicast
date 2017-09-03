@@ -1,4 +1,4 @@
-import ElicastOT, { ElicastText, ElicastSelection, ElicastRun, ElicastExercise } from '@/elicast/elicast-ot'
+import ElicastOT, { ElicastText, ElicastSelection, ElicastRun, ElicastExercise, ElicastAssert } from '@/elicast/elicast-ot'
 import SolveExerciseSession from './solve-exercise-session'
 import Slider from '@/components/Slider'
 import RunOutputView from '@/components/RunOutputView'
@@ -50,6 +50,7 @@ export default {
       PlayMode,
 
       code: '',
+      dirty: false,
       elicastId: this.elicast.id,
       elicastTitle: this.elicast.title,
       solveExerciseSession: null,
@@ -94,15 +95,14 @@ export default {
       let newOtIdx = this.ots.findIndex(ot => ts < ot.ts)
       newOtIdx = (newOtIdx < 0 ? this.ots.length : newOtIdx) - 1
 
-      if (prevOtIdx === newOtIdx) return
-
       let shouldRedrawExerciseAreas = false
       let shouldRedrawRunOutput = false
 
-      const isBigJump = Math.abs(newOtIdx - prevOtIdx) > 10
+      this.dirty = this.dirty || Math.abs(newOtIdx - prevOtIdx) > 10
 
-      if (isBigJump) {
-        this.cm.setValue(ElicastOT.buildText(this.ots.slice(0, newOtIdx + 1)))
+      if (this.dirty) {
+        const code = ElicastOT.buildText(this.ots.slice(0, newOtIdx + 1))
+        this.cm.setValue(code)
       }
 
       // prevOtIdx < newOtIdx
@@ -111,7 +111,7 @@ export default {
 
         if (ot instanceof ElicastSelection) continue
 
-        if (!(isBigJump && ot instanceof ElicastText)) {
+        if (!this.dirty && ot instanceof ElicastText) {
           ElicastOT.applyOtToCM(this.cm, ot)
         }
 
@@ -120,19 +120,17 @@ export default {
         } else if (ot instanceof ElicastRun) {
           shouldRedrawRunOutput = true
         } else if (ot instanceof ElicastExercise && !ot._solved) {
-          // start solve exercise
-          this.solveExerciseSession = new SolveExerciseSession(this.ots, ot)
-          this.solveExerciseSession.start()
           this.playMode = PlayMode.SOLVE_EXERCISE
         }
       }
+
       // prevOtIdx > newOtIdx
       for (let i = prevOtIdx; i > newOtIdx && i >= 0; i--) {
         const ot = this.ots[i]
 
         if (ot instanceof ElicastSelection) continue
 
-        if (!(isBigJump && ot instanceof ElicastText)) {
+        if (!this.dirty && ot instanceof ElicastText) {
           ElicastOT.revertOtToCM(this.cm, ot)
         }
 
@@ -144,8 +142,8 @@ export default {
       }
 
       // if playMode is not playback, always redraw when ts changes
-      shouldRedrawExerciseAreas = shouldRedrawExerciseAreas || this.playMode !== PlayMode.PLAYBACK
-      shouldRedrawRunOutput = shouldRedrawRunOutput || this.playMode !== PlayMode.PLAYBACK
+      shouldRedrawExerciseAreas = shouldRedrawExerciseAreas || this.dirty
+      shouldRedrawRunOutput = shouldRedrawRunOutput || this.dirty
 
       // restore exercise areas
       if (shouldRedrawExerciseAreas) {
@@ -160,6 +158,8 @@ export default {
       // restore selection
       this.redrawSelection()
 
+      this.dirty = false
+
       if (ts === this.$refs.slider.max) {
         this.playMode = PlayMode.PAUSE
       }
@@ -173,16 +173,6 @@ export default {
         if (this.ts === this.maxTs) {
           // replay from the beginning
           this.ts = 0
-        } else {
-          // restore code
-          ElicastOT.restoreCMToTs(this.cm, this.ots, this.ts)
-          // restore selection
-          this.redrawSelection()
-          // restore exercise area
-          let newOtIdx = this.ots.findIndex(ot => this.ts < ot.ts)
-          ElicastOT.redrawExerciseAreas(this.cm, this.ots.slice(0, newOtIdx))
-          // restore run output
-          this.redrawRunOutput()
         }
 
         this.playbackSound.seek(this.ts / 1000)
@@ -207,8 +197,23 @@ export default {
         this.playbackTimer = -1
       }
 
-      // Give focus to the editor if new playMode is SOLVE_EXERCISE state,
-      // otherwise give focus to the control button
+      if (playMode === PlayMode.SOLVE_EXERCISE) {
+        if (_.isNil(this.solveExerciseSession)) {
+          const exerciseStartOt = _.findLast(this.ots,
+            ot => ot.ts <= this.ts && ot instanceof ElicastExercise)
+          this.solveExerciseSession = new SolveExerciseSession(this.ots, exerciseStartOt)
+          this.solveExerciseSession.start()
+        }
+
+        // apply previous solveOts before playMode changes to SOLVE_EXERCISE
+        this.solveExerciseSession.solveOts
+          .filter(ot => ot instanceof ElicastText)
+          .forEach(ot => ElicastOT.applyOtToCM(this.cm, ot))
+
+        ElicastOT.redrawSolveExerciseArea(this.cm, this.solveExerciseSession.solveOts)
+        this.dirty = true
+      }
+
       _.defer(() => {
         if (playMode === PlayMode.SOLVE_EXERCISE) this.cm.focus()
         else this.$refs.controlButton.focus()
@@ -224,7 +229,12 @@ export default {
     this.cm = this.$refs.cm.editor
     this.cm.on('mousedown', this.handleEditorMousedown)
 
-    this.maxTs = this.ots.length && this.ots[this.ots.length - 1].ts
+    if (!this.ots.length) {
+      this.maxTs = 0
+    } else {
+      let assertIdx = this.ots.findIndex(ot => ot instanceof ElicastAssert)
+      this.maxTs = assertIdx < 0 ? this.ots[this.ots.length - 1].ts : this.ots[assertIdx - 1].ts
+    }
     this.ts = 0
   },
 
@@ -240,7 +250,7 @@ export default {
     redrawRunOutput (runOt) {
       runOt = runOt || ElicastOT.getPreviousOtForOtType(this.ots, ElicastRun, this.ts)
       if (runOt) {
-        this.runOutput = runOt.output || '/* running... */'
+        this.runOutput = runOt.isRunning() ? '/* running... */' : runOt.output
       } else {
         this.runOutput = ''
       }
@@ -276,9 +286,9 @@ export default {
         this.solveExerciseSession.finish()
 
         this.playMode = PlayMode.PAUSE
-        ElicastOT.restoreCMToTs(this.cm, this.ots, this.ts)
 
         this.ts = this.solveExerciseSession.exerciseEndOt.ts
+        this.solveExerciseSession = null
       } else {
         alert('Wrong answer!')
       }
@@ -289,6 +299,7 @@ export default {
     },
     handleEditorBeforeChange (cm, changeObj) {
       if (this.playMode !== PlayMode.SOLVE_EXERCISE) return
+      if (!changeObj.origin) return // ignore restoring solveOts
 
       if (!ElicastOT.isChangeAllowedForSolveExercise(this.ots, this.solveExerciseSession, cm, changeObj)) {
         console.warn('Editing non-editable area')
@@ -301,8 +312,17 @@ export default {
       this.solveExerciseSession.pushSolveOt(newOT)
     },
     handleEditorChange (cm, changeObj) {
+      if (changeObj.origin) {
+        this.dirty = true
+      }
+
       if (this.playMode === PlayMode.SOLVE_EXERCISE) {
         ElicastOT.redrawSolveExerciseArea(this.cm, this.solveExerciseSession.solveOts)
+      }
+    },
+    handleEditorBeforeSelectionChange (cm, obj) {
+      if (obj.origin) {
+        this.dirty = true
       }
     },
     handleEditorMousedown (event) {

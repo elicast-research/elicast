@@ -148,6 +148,10 @@ export class ElicastRun extends ElicastOT {
     this.output = output
   }
 
+  isRunning () {
+    return _.isNil(this.exitCode)
+  }
+
   static fromJSON (ot) {
     return new this(ot.ts, ot.exitCode, ot.output)
   }
@@ -342,15 +346,6 @@ ElicastOT.revertOtToCM = function (cm, ot) {
       cm.doc.replaceRange(ot.removedText, fromLineCh, toLineCh)
       break
     }
-  }
-}
-
-ElicastOT.restoreCMToTs = function (cm, ots, ts) {
-  cm.doc.setValue('')
-  let newOtIdx = ots.findIndex(ot => ts < ot.ts)
-  newOtIdx = (newOtIdx < 0 ? ots.length : newOtIdx) - 1
-  for (let i = 0; i <= newOtIdx; i++) {
-    ElicastOT.applyOtToCM(cm, ots[i])
   }
 }
 
@@ -560,6 +555,7 @@ ElicastOT.replacePartialOts = function (ots, startIdx, amount, newOts) {
   const oriOtsAreaLength = oriOtsArea.toPos - oriOtsArea.fromPos
   const newOtsArea = getAreas(newOts).pop() // only support one area
   const newOtsAreaLength = newOtsArea.toPos - newOtsArea.fromPos
+  const deltaLength = newOtsAreaLength - oriOtsAreaLength
 
   ots.splice(startIdx, amount, ...newOts)
 
@@ -568,16 +564,22 @@ ElicastOT.replacePartialOts = function (ots, startIdx, amount, newOts) {
     switch (ot.constructor) {
       case ElicastText:
         if (ot.fromPos >= oriOtsArea.toPos) {
-          ot.fromPos += newOtsAreaLength - oriOtsAreaLength
-          ot.toPos += newOtsAreaLength - oriOtsAreaLength
+          ot.fromPos += deltaLength
+          ot.toPos += deltaLength
+        } else {
+          const areaShiftLength = ot.insertedText.length - ot.removedText.length
+          oriOtsArea.fromPos += areaShiftLength
+          oriOtsArea.toPos += areaShiftLength
+          newOtsArea.fromPos += areaShiftLength
+          newOtsArea.toPos += areaShiftLength
         }
         break
       case ElicastSelection:
         if (oriOtsArea.toPos <= ot.fromPos) {
-          ot.fromPos += newOtsAreaLength - oriOtsAreaLength
-          ot.toPos += newOtsAreaLength - oriOtsAreaLength
+          ot.fromPos += deltaLength
+          ot.toPos += deltaLength
         } else if (ot.fromPos <= oriOtsArea.fromPos && oriOtsArea.toPos <= ot.toPos) {
-          ot.toPos += newOtsAreaLength - oriOtsAreaLength
+          ot.toPos += deltaLength
         } else if (oriOtsArea.fromPos <= ot.fromPos && ot.fromPos < oriOtsArea.toPos &&
                    oriOtsArea.fromPos < ot.toPos) {
           ot.fromPos = newOtsArea.toPos

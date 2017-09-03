@@ -10,7 +10,9 @@
                   :class="{ 'solve-exercise': playMode === PlayMode.SOLVE_EXERCISE }"
                   :options="editorOptions"
                   @beforeChange="handleEditorBeforeChange"
-                  @change="handleEditorChange">
+                  @change="handleEditorChange"
+                  @beforeSelectionChange="handleEditorBeforeSelectionChange">
+                  <!-- @cursorActivity="handleEditorCursorActivity"> -->
       </codemirror>
 
       <div class="code-right-pane">
@@ -60,8 +62,7 @@
       <Slider ref="slider"
               class="slider"
               @change="handleSliderChange"
-              :max="maxTs"
-              :disabled="playMode === PlayMode.SOLVE_EXERCISE"></Slider>
+              :max="maxTs"></Slider>
 
       <div class="ts-display text-secondary">
         {{ tsDisplay }}

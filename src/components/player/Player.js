@@ -332,6 +332,7 @@ export default {
     skipExercise () {
       this.solveExerciseSession.finish()
       this.playMode = PlayMode.PLAYBACK
+      this.solveExerciseSession = null
     },
     handleEditorBeforeChange (cm, changeObj) {
       if (this.playMode !== PlayMode.SOLVE_EXERCISE) return

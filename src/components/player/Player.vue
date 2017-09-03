@@ -46,6 +46,8 @@
 
         <RunOutputView :output="runOutput"></RunOutputView>
       </div>
+
+      <Toast ref="toast" class="toast-wrap"></Toast>
     </div>
 
     <div class="controls">
@@ -62,7 +64,8 @@
       <Slider ref="slider"
               class="slider"
               @change="handleSliderChange"
-              :max="maxTs"></Slider>
+              :max="maxTs"
+              :disabled="!playModeReady"></Slider>
 
       <div class="ts-display text-secondary">
         {{ tsDisplay }}

@@ -45,6 +45,19 @@ $codeFontFamily: Menlo, Consolas, 'DejaVu Sans Mono', monospace;
       }
     }
   }
+
+  .toast-wrap {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    margin: auto;
+    width: 20rem;
+
+    & > div {
+      margin-top: .5rem;
+    }
+  }
 }
 
 .CodeMirror {

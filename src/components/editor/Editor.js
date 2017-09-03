@@ -6,6 +6,7 @@ import RecordAssertSession from './record-assert-session'
 import RecordSound from './record-sound'
 import Slider from '@/components/Slider'
 import RunOutputView from '@/components/RunOutputView'
+import Toast from '@/components/Toast'
 import { codemirror } from 'vue-codemirror'
 import 'codemirror/addon/selection/mark-selection'
 import 'codemirror/mode/python/python'
@@ -373,6 +374,11 @@ export default {
       this.redrawRunOutput(runStartOT)
       this.playModeReady = false
 
+      const toast = this.$refs.toast.show({
+        class: ['alert', 'alert-warning'],
+        content: '<i class="fa fa-terminal"></i> Running...'
+      })
+
       const response = await axios.post('http://anne.pjknkda.com:7822/code/run', qs.stringify({
         code: this.code
       }))
@@ -382,6 +388,8 @@ export default {
       this.ots.push(runResultOT)
       this.redrawRunOutput(runResultOT)
       this.playModeReady = true
+
+      this.$refs.toast.remove(toast)
     },
     async cutOts () {
       const firstCutOtIdx = this.ots.findIndex(ot => this.ts < ot.ts)
@@ -542,6 +550,7 @@ export default {
   components: {
     codemirror,
     Slider,
-    RunOutputView
+    RunOutputView,
+    Toast
   }
 }

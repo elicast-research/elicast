@@ -94,6 +94,8 @@
 
         <RunOutputView :output="runOutput"></RunOutputView>
       </div>
+
+      <Toast ref="toast" class="toast-wrap"></Toast>
     </div>
 
     <div class="controls">
@@ -118,7 +120,7 @@
               @change="handleSliderChange"
               :color="sliderColor"
               :max="maxTs"
-              :disabled="playMode.isRecording()"></Slider>
+              :disabled="playMode.isRecording() || !playModeReady"></Slider>
 
       <div class="ts-display text-secondary">
         {{ tsDisplay }}

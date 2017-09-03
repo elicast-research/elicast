@@ -2,6 +2,7 @@ import ElicastOT, { ElicastText, ElicastSelection, ElicastRun, ElicastExercise, 
 import SolveExerciseSession from './solve-exercise-session'
 import Slider from '@/components/Slider'
 import RunOutputView from '@/components/RunOutputView'
+import Toast from '@/components/Toast'
 import { codemirror } from 'vue-codemirror'
 import 'codemirror/addon/selection/mark-selection'
 import 'codemirror/mode/python/python'
@@ -269,6 +270,11 @@ export default {
       this.redrawRunOutput(runStartOT)
       this.playModeReady = false
 
+      const toast = this.$refs.toast.show({
+        class: ['alert', 'alert-warning'],
+        content: '<i class="fa fa-terminal"></i> Running...'
+      })
+
       const response = await axios.post('http://anne.pjknkda.com:7822/code/run', qs.stringify({
         code: this.code
       }))
@@ -276,6 +282,8 @@ export default {
       const runResultOT = new ElicastRun(0, response.data.exit_code, response.data.output)
       this.redrawRunOutput(runResultOT)
       this.playModeReady = true
+
+      this.$refs.toast.remove(toast)
     },
     async checkAnswer () {
       const session = this.solveExerciseSession
@@ -284,12 +292,19 @@ export default {
       const solutionOtsLength = (session.exerciseEndIndex - 1) - (session.exerciseStartIndex + 1) + 1
       ElicastOT.replacePartialOts(mockOts, session.exerciseStartIndex + 1, solutionOtsLength, session.solveOts)
 
+      const checkAnswerToast = this.$refs.toast.show({
+        class: ['alert', 'alert-warning'],
+        content: '<i class="fa fa-check"></i> Checking answer...'
+      })
+
       const response = await axios.post('http://anne.pjknkda.com:7822/code/answer/' + this.elicastId,
         qs.stringify({
           ex_id: session.exId,
           solve_ots: JSON.stringify(session.solveOts),
           code: ElicastOT.buildText(mockOts)
         }))
+
+      this.$refs.toast.remove(checkAnswerToast)
 
       if (response.data.exit_code === 0) {
         ElicastOT.replacePartialOts(this.ots, session.exerciseStartIndex + 1, solutionOtsLength, session.solveOts)
@@ -300,8 +315,18 @@ export default {
 
         this.ts = this.solveExerciseSession.exerciseEndOt.ts
         this.solveExerciseSession = null
+
+        this.$refs.toast.show({
+          class: ['alert', 'alert-success'],
+          content: 'Correct!',
+          lifespan: 2000
+        })
       } else {
-        alert('Wrong answer!')
+        this.$refs.toast.show({
+          class: ['alert', 'alert-danger'],
+          content: 'Wrong answer, try again!',
+          lifespan: 2000
+        })
       }
     },
     skipExercise () {
@@ -393,6 +418,7 @@ export default {
   components: {
     codemirror,
     Slider,
-    RunOutputView
+    RunOutputView,
+    Toast
   }
 }

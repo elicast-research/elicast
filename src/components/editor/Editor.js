@@ -14,6 +14,7 @@ import _ from 'lodash'
 import axios from 'axios'
 import blobUtil from 'blob-util'
 import moment from 'moment'
+import Promise from 'bluebird'
 import qs from 'qs'
 
 class PlayMode {
@@ -90,7 +91,7 @@ export default {
       recordStartOt: null,
       recordExerciseSession: null,
       recordAssertSession: null,
-      recordSound: new RecordSound('audio/webm', this.elicast ? this.elicast.voiceBlob : null),
+      recordSound: new RecordSound('audio/webm', this.elicast ? this.elicast.voiceBlobs : null),
       runOutput: null,
       playbackSound: null,
       playbackStartTs: -1,
@@ -125,7 +126,7 @@ export default {
       return this.playMode.isRecording() ? 'red' : 'black'
     },
     currentElicast () {
-      return new Elicast(this.elicastId, this.elicastTitle, this.ots, this.recordSound.recordedBlob)
+      return new Elicast(this.elicastId, this.elicastTitle, this.ots, this.recordSound.chunks)
     }
   },
 
@@ -252,11 +253,12 @@ export default {
         this.recordTimer = setInterval(this.recordTick, RECORD_TICK)
       } else if (prevPlayMode === PlayMode.RECORD && !playMode.isRecording()) {
         // end recording
-        await this.recordSound.stopRecording()
 
         const ts = this.recordStartOt.getRelativeTS()
         this.ots.push(new ElicastNop(ts))
         this.recordStartOt = null
+
+        await this.recordSound.stopRecording()
 
         clearInterval(this.recordTimer)
         this.recordTimer = -1
@@ -424,7 +426,8 @@ export default {
       const audioSplitResponse = await axios.post('http://anne.pjknkda.com:7822/audio/split',
         qs.stringify({
           segments: JSON.stringify([[0, this.ts]]),
-          audio_blob: await blobUtil.blobToDataURL(this.recordSound.recordedBlob)
+          audio_blobs: JSON.stringify(
+            await Promise.all(this.recordSound.chunks.map(blobUtil.blobToDataURL)))
         }))
 
       this.recordSound = new RecordSound('audio/webm',

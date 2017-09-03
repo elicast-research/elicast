@@ -1,8 +1,8 @@
 export default class Elicast {
-  constructor (id, title, ots, voiceBlob) {
+  constructor (id, title, ots, voiceBlobs) {
     this.id = id
     this.title = title
     this.ots = ots
-    this.voiceBlob = voiceBlob
+    this.voiceBlobs = voiceBlobs
   }
 }

@@ -61,7 +61,10 @@ export default {
       playModeReady: true,
       maxTs: 0,
       runOutput: null,
-      playbackSound: new Howl({ src: [URL.createObjectURL(this.elicast.voiceBlob)], format: ['webm'] }),
+      playbackSound: new Howl({
+        src: [URL.createObjectURL(new Blob(this.elicast.voiceBlobs))],
+        format: ['webm']
+      }),
       playbackStartTs: -1,
       playbackStartTime: -1,
 

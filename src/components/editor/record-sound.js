@@ -5,18 +5,14 @@ import Promise from 'bluebird'
  *  RecordSound
  */
 export default class RecordSound {
-  constructor (mimeType, recordedBlob = null) {
-    if (recordedBlob !== null && mimeType !== recordedBlob.type) throw new Error('MimeType is not matched')
-
+  constructor (mimeType, recordedBlobs = null) {
     this.mediaRecorder = null
     this.mimeType = mimeType
-    this.recordedBlob = recordedBlob
-    this.chunks = []
+    this.chunks = recordedBlobs !== null ? recordedBlobs : []
   }
 
   async record () {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-    this.chunks = []
     this.mediaRecorder = new MediaRecorder(stream, { mimeType: this.mimeType })
     this.mediaRecorder.ondataavailable = this._onDataAvailable.bind(this)
     this.mediaRecorder.start()
@@ -30,14 +26,10 @@ export default class RecordSound {
 
     this.mediaRecorder.stop()
     await stopPromise
-
-    const newBlob = new Blob(this.chunks, { type: this.mimeType })
-    this.recordedBlob = !this.recordedBlob ? newBlob
-      : new Blob([this.recordedBlob, newBlob], { type: this.mimeType })
   }
 
   async load () {
-    const blobUrl = URL.createObjectURL(this.recordedBlob)
+    const blobUrl = URL.createObjectURL(new Blob(this.chunks, { type: this.mimeType }))
     const sound = new Howl({ src: [blobUrl], format: ['webm'] })
 
     await Promise.fromCallback(callback => sound.once('load', callback))

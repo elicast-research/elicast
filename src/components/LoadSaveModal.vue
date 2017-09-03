@@ -46,6 +46,7 @@ import blobUtil from 'blob-util'
 import moment from 'moment'
 import Modal from 'exports-loader?Modal!bootstrap/js/dist/modal'
 import _ from 'lodash'
+import Promise from 'bluebird'
 import qs from 'qs'
 
 import ElicastOT, { ElicastExercise, ElicastAssert } from '@/elicast/elicast-ot'
@@ -135,7 +136,7 @@ export default {
         elicastRaw.id,
         elicastRaw.title,
         ots,
-        elicastRaw.voice_blob === '' ? null : await blobUtil.dataURLToBlob(elicastRaw.voice_blob)
+        await Promise.all(elicastRaw.voice_blobs.map(blobUtil.dataURLToBlob))
       )
 
       this.$emit('elicastLoaded', elicast)
@@ -164,7 +165,8 @@ export default {
         qs.stringify({
           title: newElicast.title,
           ots: JSON.stringify(newElicast.ots),
-          voice_blob: newElicast.voiceBlob ? await blobUtil.blobToDataURL(newElicast.voiceBlob) : ''
+          voice_blobs: JSON.stringify(
+            await Promise.all(elicast.voiceBlobs.map(blobUtil.blobToDataURL)))
         }))
 
       await this.loadElicast(elicast.id)
@@ -175,7 +177,8 @@ export default {
         qs.stringify({
           title: elicast.title,
           ots: JSON.stringify(elicast.ots),
-          voice_blob: elicast.voiceBlob ? await blobUtil.blobToDataURL(elicast.voiceBlob) : ''
+          voice_blobs: JSON.stringify(
+            await Promise.all(elicast.voiceBlobs.map(blobUtil.blobToDataURL)))
         }))
 
       elicast.id = response.data.elicast.id

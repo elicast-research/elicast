@@ -97,11 +97,11 @@ $codeFontFamily: Menlo, Consolas, 'DejaVu Sans Mono', monospace;
   }
 
   .run-output {
+    overflow: auto;
     background-color: $outputBackgroundColor;
   }
 
   .run-output pre {
-    overflow: auto;
     font-size: $outputFontSize;
     font-family: $codeFontFamily;
     line-height: $lineHeight;

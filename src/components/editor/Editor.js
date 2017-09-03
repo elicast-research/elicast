@@ -371,6 +371,7 @@ export default {
       const runStartOT = new ElicastRun(ts)
       this.ots.push(runStartOT)
       this.redrawRunOutput(runStartOT)
+      this.playModeReady = false
 
       const response = await axios.post('http://anne.pjknkda.com:7822/code/run', qs.stringify({
         code: this.code
@@ -380,6 +381,7 @@ export default {
       const runResultOT = new ElicastRun(ts, response.data.exit_code, response.data.output)
       this.ots.push(runResultOT)
       this.redrawRunOutput(runResultOT)
+      this.playModeReady = true
     },
     async cutOts () {
       const firstCutOtIdx = this.ots.findIndex(ot => this.ts < ot.ts)
@@ -396,6 +398,8 @@ export default {
         return
       }
 
+      this.playModeReady = false
+
       const audioSplitResponse = await axios.post('http://anne.pjknkda.com:7822/audio/split',
         qs.stringify({
           segments: JSON.stringify([[0, this.ts]]),
@@ -409,6 +413,8 @@ export default {
       this.ots.splice(firstCutOtIdx, this.ots.length - firstCutOtIdx)
       this.ots.push(new ElicastNop(this.ts + 1))  // Trick to invoke ts update
       this.ts += 1
+
+      this.playModeReady = true
     },
     async evaluateAssertion () {
       this.runOutput = '/* running... */'

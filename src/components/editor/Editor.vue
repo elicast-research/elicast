@@ -46,6 +46,7 @@
         <div class="pause-controls code-right-pane-controls"
              v-show="playMode === PlayMode.PAUSE">
           <button class="btn btn-sm btn-light"
+                  :disabled="!playModeReady"
                   @click="cutOts">
             <i class="fa fa-scissors"></i> Cut Here
           </button>

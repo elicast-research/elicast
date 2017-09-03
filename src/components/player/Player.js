@@ -258,6 +258,7 @@ export default {
     async runCode () {
       const runStartOT = new ElicastRun(0)
       this.redrawRunOutput(runStartOT)
+      this.playModeReady = false
 
       const response = await axios.post('http://anne.pjknkda.com:7822/code/run', qs.stringify({
         code: this.code
@@ -265,6 +266,7 @@ export default {
 
       const runResultOT = new ElicastRun(0, response.data.exit_code, response.data.output)
       this.redrawRunOutput(runResultOT)
+      this.playModeReady = true
     },
     async checkAnswer () {
       const session = this.solveExerciseSession
@@ -285,7 +287,7 @@ export default {
 
         this.solveExerciseSession.finish()
 
-        this.playMode = PlayMode.PAUSE
+        this.playMode = PlayMode.PLAYBACK
 
         this.ts = this.solveExerciseSession.exerciseEndOt.ts
         this.solveExerciseSession = null

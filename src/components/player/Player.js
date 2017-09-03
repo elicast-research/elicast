@@ -50,6 +50,7 @@ export default {
       PlayMode,
 
       code: '',
+      dirty: false,
       elicastId: this.elicast.id,
       elicastTitle: this.elicast.title,
       solveExerciseSession: null,
@@ -94,15 +95,14 @@ export default {
       let newOtIdx = this.ots.findIndex(ot => ts < ot.ts)
       newOtIdx = (newOtIdx < 0 ? this.ots.length : newOtIdx) - 1
 
-      if (prevOtIdx === newOtIdx) return
-
       let shouldRedrawExerciseAreas = false
       let shouldRedrawRunOutput = false
 
-      const isBigJump = Math.abs(newOtIdx - prevOtIdx) > 10
+      this.dirty = this.dirty || Math.abs(newOtIdx - prevOtIdx) > 10
 
-      if (isBigJump) {
-        this.cm.setValue(ElicastOT.buildText(this.ots.slice(0, newOtIdx + 1)))
+      if (this.dirty) {
+        const code = ElicastOT.buildText(this.ots.slice(0, newOtIdx + 1))
+        this.cm.setValue(code)
       }
 
       // prevOtIdx < newOtIdx
@@ -111,7 +111,7 @@ export default {
 
         if (ot instanceof ElicastSelection) continue
 
-        if (!(isBigJump && ot instanceof ElicastText)) {
+        if (!this.dirty && ot instanceof ElicastText) {
           ElicastOT.applyOtToCM(this.cm, ot)
         }
 
@@ -135,23 +135,17 @@ export default {
           ElicastOT.redrawSolveExerciseArea(this.cm, this.solveExerciseSession.solveOts)
 
           this.playMode = PlayMode.SOLVE_EXERCISE
+          // dirty will become true
         }
       }
-      // prevOtIdx > newOtIdx
-      // revert solveOts before ots is reverted
-      const prevOt = this.ots[prevOtIdx]
-      if (!isBigJump && prevOtIdx > newOtIdx && prevOt instanceof ElicastExercise && !prevOt._solved) {
-        _.forEachRight(this.solveExerciseSession.solveOts, ot => {
-          ElicastOT.revertOtToCM(this.cm, ot)
-        })
-      }
 
+      // prevOtIdx > newOtIdx
       for (let i = prevOtIdx; i > newOtIdx && i >= 0; i--) {
         const ot = this.ots[i]
 
         if (ot instanceof ElicastSelection) continue
 
-        if (!(isBigJump && ot instanceof ElicastText)) {
+        if (!this.dirty && ot instanceof ElicastText) {
           ElicastOT.revertOtToCM(this.cm, ot)
         }
 
@@ -163,16 +157,12 @@ export default {
       }
 
       // if playMode is not playback, always redraw when ts changes
-      shouldRedrawExerciseAreas = shouldRedrawExerciseAreas || this.playMode !== PlayMode.PLAYBACK
-      shouldRedrawRunOutput = shouldRedrawRunOutput || this.playMode !== PlayMode.PLAYBACK
+      shouldRedrawExerciseAreas = shouldRedrawExerciseAreas || this.dirty
+      shouldRedrawRunOutput = shouldRedrawRunOutput || this.dirty
 
       // restore exercise areas
       if (shouldRedrawExerciseAreas) {
-        if (!_.isNil(this.solveExerciseSession) && this.ots[newOtIdx] instanceof ElicastExercise && !this.ots[newOtIdx]._solved) {
-          ElicastOT.redrawExerciseAreas(this.cm, _.concat(this.ots.slice(0, newOtIdx + 1), this.solveExerciseSession.solveOts))
-        } else {
-          ElicastOT.redrawExerciseAreas(this.cm, this.ots.slice(0, newOtIdx + 1))
-        }
+        ElicastOT.redrawExerciseAreas(this.cm, this.ots.slice(0, newOtIdx + 1))
       }
 
       // restore run output
@@ -182,6 +172,8 @@ export default {
 
       // restore selection
       this.redrawSelection()
+
+      this.dirty = false
 
       if (ts === this.$refs.slider.max) {
         this.playMode = PlayMode.PAUSE
@@ -196,16 +188,6 @@ export default {
         if (this.ts === this.maxTs) {
           // replay from the beginning
           this.ts = 0
-        } else {
-          // restore code
-          ElicastOT.restoreCMToTs(this.cm, this.ots, this.ts)
-          // restore selection
-          this.redrawSelection()
-          // restore exercise area
-          let newOtIdx = this.ots.findIndex(ot => this.ts < ot.ts)
-          ElicastOT.redrawExerciseAreas(this.cm, this.ots.slice(0, newOtIdx))
-          // restore run output
-          this.redrawRunOutput()
         }
 
         this.playbackSound.seek(this.ts / 1000)
@@ -228,6 +210,10 @@ export default {
 
         clearTimeout(this.playbackTimer)
         this.playbackTimer = -1
+      }
+
+      if (playMode === PlayMode.SOLVE_EXERCISE) {
+        this.dirty = true
       }
 
       _.defer(() => {
@@ -302,7 +288,6 @@ export default {
         this.solveExerciseSession.finish()
 
         this.playMode = PlayMode.PAUSE
-        ElicastOT.restoreCMToTs(this.cm, this.ots, this.ts)
 
         this.ts = this.solveExerciseSession.exerciseEndOt.ts
         this.solveExerciseSession = null
@@ -328,8 +313,17 @@ export default {
       this.solveExerciseSession.pushSolveOt(newOT)
     },
     handleEditorChange (cm, changeObj) {
+      if (changeObj.origin) {
+        this.dirty = true
+      }
+
       if (this.playMode === PlayMode.SOLVE_EXERCISE) {
         ElicastOT.redrawSolveExerciseArea(this.cm, this.solveExerciseSession.solveOts)
+      }
+    },
+    handleEditorBeforeSelectionChange (cm, obj) {
+      if (obj.origin) {
+        this.dirty = true
       }
     },
     handleEditorMousedown (event) {

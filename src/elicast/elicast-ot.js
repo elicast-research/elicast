@@ -345,15 +345,6 @@ ElicastOT.revertOtToCM = function (cm, ot) {
   }
 }
 
-ElicastOT.restoreCMToTs = function (cm, ots, ts) {
-  cm.doc.setValue('')
-  let newOtIdx = ots.findIndex(ot => ts < ot.ts)
-  newOtIdx = (newOtIdx < 0 ? ots.length : newOtIdx) - 1
-  for (let i = 0; i <= newOtIdx; i++) {
-    ElicastOT.applyOtToCM(cm, ots[i])
-  }
-}
-
 ElicastOT.redrawExerciseAreas = function (cm, ots) {
   cm.doc.getAllMarks()
     .filter(marker => marker.className === 'exercise-block')

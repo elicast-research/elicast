@@ -10,7 +10,9 @@
                   :class="{ 'solve-exercise': playMode === PlayMode.SOLVE_EXERCISE }"
                   :options="editorOptions"
                   @beforeChange="handleEditorBeforeChange"
-                  @change="handleEditorChange">
+                  @change="handleEditorChange"
+                  @beforeSelectionChange="handleEditorBeforeSelectionChange">
+                  <!-- @cursorActivity="handleEditorCursorActivity"> -->
       </codemirror>
 
       <div class="code-right-pane">

@@ -86,4 +86,14 @@ export default class ElicastService {
     return [response.data.exit_code, response.data.output]
   }
 
+  static async splitAudio (segments, audioBlobs) {
+    const response = await axios.post(SERVICE_ENDPOINT + '/audio/split',
+      qs.stringify({
+        segments: JSON.stringify(segments),
+        audio_blobs: JSON.stringify([
+          await blobUtil.blobToDataURL(audioBlobs)])
+      }))
+
+    return await blobUtil.dataURLToBlob(response.data.outputs[0])
+  }
 }

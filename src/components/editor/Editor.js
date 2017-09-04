@@ -446,14 +446,8 @@ export default {
         ot.constructor === ElicastRecordStart)
       const lastSoundChunkIdx = lastRecordStartOt.soundChunkIdx
 
-      const audioSplitResponse = await axios.post('http://anne.pjknkda.com:7822/audio/split',
-        qs.stringify({
-          segments: JSON.stringify([[0, this.ts - lastRecordStartOt.ts]]),
-          audio_blobs: JSON.stringify([
-            await blobUtil.blobToDataURL(this.soundManager.chunks[lastSoundChunkIdx])])
-        }))
-
-      const reducedChunk = await blobUtil.dataURLToBlob(audioSplitResponse.data.outputs[0])
+      const reducedChunk = await ElicastService.splitAudio(
+        [[0, this.ts - lastRecordStartOt.ts]], this.soundManager.chunks[lastSoundChunkIdx])
       this.soundManager.chunks.splice(
         lastSoundChunkIdx, this.soundManager.chunks.length - lastSoundChunkIdx, reducedChunk)
 

@@ -55,6 +55,40 @@ export class ElicastNop extends ElicastOT {
   }
 }
 
+export class ElicastRecordStart extends ElicastOT {
+  static COMMAND = 'record_start'
+
+  constructor (ts, soundChunkIdx, time = Date.now()) {
+    super(ts, ElicastRecordStart.COMMAND)
+
+    if (!_.isInteger(soundChunkIdx)) throw new Error('Invalid soundChunkIdx')
+    if (!_.isInteger(time)) throw new Error('Invalid time')
+
+    this.soundChunkIdx = soundChunkIdx
+    this.time = time
+  }
+
+  static fromJSON (ot) {
+    return new this(ot.ts, ot.soundChunkIdx, ot.time)
+  }
+
+  getRelativeTS (time = Date.now()) {
+    return this.ts + time - this.time
+  }
+}
+
+export class ElicastRecordEnd extends ElicastOT {
+  static COMMAND = 'record_end'
+
+  constructor (ts) {
+    super(ts, ElicastRecordEnd.COMMAND)
+  }
+
+  static fromJSON (ot) {
+    return new this(ot.ts)
+  }
+}
+
 export class ElicastSelection extends ElicastOT {
   static COMMAND = 'selection'
 
@@ -179,6 +213,8 @@ export class ElicastAssert extends ElicastOT {
 
 const OT_CLASS_MAP = _.keyBy([
   ElicastNop,
+  ElicastRecordStart,
+  ElicastRecordEnd,
   ElicastSelection,
   ElicastText,
   ElicastExercise,

@@ -122,7 +122,6 @@ export default {
       }
 
       await ElicastService.updateElicast(elicast.id, newElicast)
-
       await this.loadElicast(elicast.id)
     },
     async saveNewElicast () {

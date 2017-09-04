@@ -108,8 +108,4 @@
   }
 }
 
-.ts-display {
-  width: 3.8rem;
-}
-
 </style>

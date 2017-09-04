@@ -13,8 +13,7 @@ import 'codemirror/mode/python/python'
 import _ from 'lodash'
 import axios from 'axios'
 import blobUtil from 'blob-util'
-import moment from 'moment'
-import Promise from 'bluebird'
+import dateFormat from 'date-fns/format'
 import qs from 'qs'
 
 class PlayMode {
@@ -120,7 +119,7 @@ export default {
       return this.playMode === PlayMode.ASSERT
     },
     tsDisplay () {
-      return moment(this.ts).format('m:ss') + ' / ' + moment(this.maxTs).format('m:ss')
+      return dateFormat(this.ts, 'm:ss') + ' / ' + dateFormat(this.maxTs, 'm:ss')
     },
     sliderColor () {
       return this.playMode.isRecording() ? 'red' : 'black'

@@ -1,5 +1,4 @@
 import { Howl } from 'howler'
-import Promise from 'bluebird'
 
 /**
  *  RecordSound
@@ -21,8 +20,8 @@ export default class RecordSound {
   async stopRecording () {
     if (!this.mediaRecorder) throw new Error('Not recording')
 
-    const stopPromise = Promise.fromCallback(callback =>
-      this.mediaRecorder.addEventListener('stop', event => callback(null, event)))
+    const stopPromise = new Promise((resolve, reject) =>
+      this.mediaRecorder.addEventListener('stop', resolve))
 
     this.mediaRecorder.stop()
     await stopPromise

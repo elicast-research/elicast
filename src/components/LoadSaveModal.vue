@@ -43,10 +43,9 @@
 import Elicast from '@/elicast/elicast'
 import axios from 'axios'
 import blobUtil from 'blob-util'
-import moment from 'moment'
+import dateFormat from 'date-fns/format'
 import Modal from 'exports-loader?Modal!bootstrap/js/dist/modal'
 import _ from 'lodash'
-import Promise from 'bluebird'
 import qs from 'qs'
 
 import ElicastOT, { ElicastExercise, ElicastAssert } from '@/elicast/elicast-ot'
@@ -190,7 +189,7 @@ export default {
   filters: {
     formatTimestamp (value) {
       if (!value) return ''
-      return moment.unix(value / 1000).format('MM/DD/YYYY hh:mm')
+      return dateFormat(value, 'MM/DD/YYYY hh:mm')
     }
   }
 }

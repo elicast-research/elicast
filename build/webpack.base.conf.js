@@ -78,6 +78,8 @@ module.exports = {
     new webpack.ProvidePlugin({
       jQuery: 'jquery',
       Util: "exports-loader?Util!bootstrap/js/dist/util"
-    })
+    }),
+    new webpack.ContextReplacementPlugin(/codemirror[\/\\]mode$/, /python|javascript/),
+    new webpack.ContextReplacementPlugin(/codemirror[\/\\]addon$/, /mark-selection/)
   ]
 }

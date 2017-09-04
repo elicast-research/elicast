@@ -10,7 +10,7 @@ import _ from 'lodash'
 import axios from 'axios'
 import qs from 'qs'
 import { Howl } from 'howler'
-import moment from 'moment'
+import dateFormat from 'date-fns/format'
 
 class PlayMode {
   static PLAYBACK = new PlayMode('playback')
@@ -81,7 +81,7 @@ export default {
     },
 
     tsDisplay () {
-      return moment(this.ts).format('m:ss') + ' / ' + moment(this.maxTs).format('m:ss')
+      return dateFormat(this.ts, 'm:ss') + ' / ' + dateFormat(this.maxTs, 'm:ss')
     }
   },
 

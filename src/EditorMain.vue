@@ -1,8 +1,12 @@
 <template>
   <div class="container">
     <div class="top-controls">
-      <button class="btn btn-sm btn-light"
+      <button v-show="displayLoadSaveButton"
+              class="btn btn-sm btn-primary"
               @click="showLoadSaveModal">Load/Save</button>
+      <button v-show="!displayLoadSaveButton"
+              class="btn btn-sm btn-primary"
+              @click="handleSaveButtonClick">Save</button>
     </div>
     <h5>/* Elicast Editor */</h5>
     <component ref="editorPlaceholder" :is="currentEditor"></component>
@@ -34,17 +38,20 @@ export default {
 
   data () {
     return {
-      currentEditor: null
+      currentEditor: { template: '<div>Loading...</div>' },
+      displayLoadSaveButton: false
     }
   },
 
-  mounted (t) {
+  async mounted (t) {
     const params = qs.parse(window.location.search.substr(1))
     if (params.id) {
-      ElicastService.loadElicast(params.id)
-        .then(this.reloadElicast)
+      const elicast = await ElicastService.loadElicast(params.id)
+      this.reloadElicast(elicast)
+      this.displayLoadSaveButton = false
     } else {
       this.reloadElicast(INIT_ELICAST)
+      this.displayLoadSaveButton = true
     }
   },
 
@@ -71,6 +78,10 @@ export default {
         }
       }
       this.currentEditor = newElicastEditor
+    },
+    handleSaveButtonClick () {
+      const currentElicast = this.$refs.editorPlaceholder.getCurrentElicast()
+      ElicastService.updateElicast(currentElicast.id, currentElicast)
     },
     loadSaveModalElicastLoaded (elicast) {
       this.reloadElicast(elicast)

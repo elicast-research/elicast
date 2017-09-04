@@ -12,13 +12,12 @@ function markExerciseOTs (recordExerciseSession) {
 }
 
 export default class RecordExerciseSession {
-  static lastExId = 1
-
-  constructor (ots) {
+  constructor (ots, exId) {
     if (!_.isArray(ots)) throw new Error('Invalid ots')
+    if (!(_.isInteger(exId) && exId > 0)) throw new Error('Invalid exId')
 
     this.ots = ots
-    this.exId = RecordExerciseSession.lastExId++
+    this.exId = exId
   }
 
   startRecording (ts) {

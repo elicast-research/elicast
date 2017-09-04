@@ -264,7 +264,10 @@ export default {
         this.recordAudioChunks = null
       } else if (prevPlayMode === PlayMode.RECORD && playMode === PlayMode.RECORD_EXERCISE) {
         // start recording exercise
-        this.recordExerciseSession = new RecordExerciseSession(this.ots)
+        const lastExerciseOt = ElicastOT.getLastOtForOtType(this.ots, ElicastExercise)
+        const newExId = lastExerciseOt ? lastExerciseOt.exId + 1 : 1
+
+        this.recordExerciseSession = new RecordExerciseSession(this.ots, newExId)
         const ts = this.recordStartOt.getRelativeTS()
         this.recordExerciseSession.startRecording(ts)
       } else if (prevPlayMode === PlayMode.RECORD_EXERCISE && playMode === PlayMode.RECORD) {

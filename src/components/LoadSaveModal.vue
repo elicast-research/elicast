@@ -50,10 +50,6 @@ export default {
     enableRemoveButton: {
       type: Boolean,
       default: false
-    },
-    teacher: {
-      type: String,
-      default: null
     }
   },
 
@@ -100,7 +96,7 @@ export default {
       this.isShow = true
       this.modalInstance.show()
 
-      this.elicasts = await ElicastService.listElicasts(this.teacher)
+      this.elicasts = await ElicastService.listElicasts(this.$query.teacher)
     },
     async loadElicast (elicastId) {
       const elicast = await ElicastService.loadElicast(elicastId)
@@ -116,7 +112,7 @@ export default {
       await ElicastService.removeElicast(elicast.id)
 
       // refresh the list
-      this.elicasts = await ElicastService.listElicasts(this.teacher)
+      this.elicasts = await ElicastService.listElicasts(this.$query.teacher)
     },
     async overwriteElicast (elicast) {
       const newElicast = this.editingElicast
@@ -125,11 +121,11 @@ export default {
         return
       }
 
-      await ElicastService.updateElicast(elicast.id, newElicast, this.teacher)
+      await ElicastService.updateElicast(elicast.id, newElicast, this.$query.teacher)
       await this.loadElicast(elicast.id)
     },
     async saveNewElicast () {
-      const newElicastId = await ElicastService.saveElicast(this.editingElicast, this.teacher)
+      const newElicastId = await ElicastService.saveElicast(this.editingElicast, this.$query.teacher)
       this.editingElicast.id = newElicastId
       this.$emit('elicastSaved', this.editingElicast)
       this.close()

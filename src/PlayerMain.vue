@@ -7,7 +7,6 @@
     <h5>/* Elicast */</h5>
     <component ref="playerPlaceholder" :is="currentPlayer"></component>
     <LoadSaveModal ref="loadSaveModal"
-                   :teacher="teacher"
                    @elicastLoaded="loadSaveModalElicastLoaded"></LoadSaveModal>
   </div>
 </template>
@@ -17,7 +16,6 @@ import ElicastPlayer from '@/components/Player'
 import ElicastService from '@/elicast/elicast-service'
 import LoadSaveModal from '@/components/LoadSaveModal'
 import _ from 'lodash'
-import qs from 'qs'
 
 function newElicastPlayer (elicast) {
   return {
@@ -44,20 +42,17 @@ export default {
 
   data () {
     return {
-      currentPlayer: null,
-      teacher: null
+      currentPlayer: null
     }
   },
 
   mounted (t) {
-    const params = qs.parse(window.location.search.substr(1))
-    if (params.id) {
-      ElicastService.loadElicast(params.id)
+    if (this.$query.id) {
+      ElicastService.loadElicast(this.$query.id)
         .then(this.reloadElicast)
     } else {
       this.showLoadSaveModal()
     }
-    this.teacher = params.teacher
   },
 
   methods: {

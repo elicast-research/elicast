@@ -12,7 +12,6 @@
     <component ref="editorPlaceholder" :is="currentEditor"></component>
     <LoadSaveModal ref="loadSaveModal"
                    :enableRemoveButton="true"
-                   :teacher="teacher"
                    @elicastLoaded="loadSaveModalElicastLoaded"
                    @elicastSaved="loadSaveModalElicastSaved"></LoadSaveModal>
   </div>
@@ -25,7 +24,6 @@ import ElicastService from '@/elicast/elicast-service'
 import ElicastEditor from '@/components/editor'
 import LoadSaveModal from '@/components/LoadSaveModal'
 import _ from 'lodash'
-import qs from 'qs'
 
 const INIT_ELICAST = new Elicast(null, 'Unnamed elicast', [
   new ElicastSelection(0, 0, 0)
@@ -40,22 +38,19 @@ export default {
   data () {
     return {
       currentEditor: { template: '<div>Loading...</div>' },
-      displayLoadSaveButton: false,
-      teacher: null
+      displayLoadSaveButton: false
     }
   },
 
   async mounted (t) {
-    const params = qs.parse(window.location.search.substr(1))
-    if (params.id) {
-      const elicast = await ElicastService.loadElicast(params.id)
+    if (this.$query.id) {
+      const elicast = await ElicastService.loadElicast(this.$query.id)
       this.reloadElicast(elicast)
       this.displayLoadSaveButton = false
     } else {
       this.reloadElicast(INIT_ELICAST)
       this.displayLoadSaveButton = true
     }
-    this.teacher = params.teacher
   },
 
   methods: {

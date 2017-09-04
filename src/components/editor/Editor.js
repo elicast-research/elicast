@@ -12,10 +12,7 @@ import { codemirror } from 'vue-codemirror'
 import 'codemirror/addon/selection/mark-selection'
 import 'codemirror/mode/python/python'
 import _ from 'lodash'
-import axios from 'axios'
-import blobUtil from 'blob-util'
 import dateFormat from 'date-fns/format'
-import qs from 'qs'
 
 class PlayMode {
   static PLAYBACK = new PlayMode('playback')

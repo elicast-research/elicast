@@ -249,6 +249,8 @@ export default {
 
     this.cm = this.$refs.cm.editor
     this.cm.on('mousedown', this.handleEditorMousedown)
+    window.addEventListener('resize', this.handleEditorResize)
+    this.handleEditorResize()
 
     if (!this.ots.length) {
       this.maxTs = 0
@@ -261,6 +263,7 @@ export default {
 
   beforeDestroy () {
     clearInterval(this.cursorBlinkTimer)
+    window.removeEventListener('resize', this.handleEditorResize)
   },
 
   methods: {
@@ -353,6 +356,9 @@ export default {
       this.solveExerciseSession.finish()
       this.playMode = PlayMode.PLAYBACK
       this.solveExerciseSession = null
+    },
+    handleEditorResize (e) {
+      this.cm.setSize(null, document.documentElement.clientHeight - 200)
     },
     handleEditorBeforeChange (cm, changeObj) {
       if (this.playMode !== PlayMode.SOLVE_EXERCISE) return

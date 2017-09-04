@@ -353,6 +353,8 @@ export default {
 
     this.cm = this.$refs.cm.editor
     this.cm.on('mousedown', this.handleEditorMousedown)
+    window.addEventListener('resize', this.handleEditorResize)
+    this.handleEditorResize()
 
     this.ts = this.ots.length && this.ots[this.ots.length - 1].ts
 
@@ -362,7 +364,7 @@ export default {
 
   beforeDestroy () {
     clearInterval(this.cursorBlinkTimer)
-
+    window.removeEventListener('resize', this.handleEditorResize)
     window.onbeforeunload = null
   },
 
@@ -466,6 +468,9 @@ export default {
       this.runOutput = output
 
       return exitCode === 0
+    },
+    handleEditorResize (e) {
+      this.cm.setSize(null, document.documentElement.clientHeight - 200)
     },
     handleEditorBeforeChange (cm, changeObj) {
       if (!this.playMode.isRecording()) return

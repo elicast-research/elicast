@@ -345,6 +345,10 @@ export default {
     }
   },
 
+  created () {
+    this.soundManager.preload()
+  },
+
   mounted (t) {
     this.cursorBlinkTimer = setInterval(this.toggleCursorBlink, CURSOR_BLINK_RATE)
 
@@ -360,6 +364,12 @@ export default {
   },
 
   beforeDestroy () {
+    // stop sound if playing
+    if (!_.isNull(this.playbackSound)) {
+      this.playbackSound.stop()
+      this.playbackSound = null
+    }
+
     clearInterval(this.cursorBlinkTimer)
     window.removeEventListener('resize', this.handleEditorResize)
     window.onbeforeunload = null

@@ -9,6 +9,7 @@ export default class SoundManager {
     this.mimeType = mimeType
     this.chunks = recordedBlobs !== null ? recordedBlobs : []
     this.tempChunks = []
+    this.sounds = []
   }
 
   async record () {
@@ -32,15 +33,31 @@ export default class SoundManager {
     this.tempChunks = []
   }
 
-  async load (chunkIdx) {
-    const blobUrl = URL.createObjectURL(this.chunks[chunkIdx])
-    const sound = new Howl({ src: [blobUrl], format: ['webm'] })
+  async preload () {
+    // load sounds 'sequentially'
+    for (let i = 0; i < this.chunks.length; i++) {
+      this.sounds[i] = await SoundManager._loadSound(this.chunks[i])
+    }
+  }
 
-    await new Promise((resolve, reject) => sound.once('load', resolve))
+  async load (chunkIdx) {
+    if (this.sounds[chunkIdx]) return this.sounds[chunkIdx]
+
+    const sound = await SoundManager._loadSound(this.chunks[chunkIdx])
+
+    this.sounds[chunkIdx] = sound
     return sound
   }
 
   _onDataAvailable (event) {
     this.tempChunks.push(event.data)
+  }
+
+  static async _loadSound (chunk) {
+    const blobUrl = URL.createObjectURL(chunk)
+    const sound = new Howl({ src: [blobUrl], format: ['webm'] })
+
+    await new Promise((resolve, reject) => sound.once('load', resolve))
+    return sound
   }
 }

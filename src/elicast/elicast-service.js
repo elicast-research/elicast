@@ -9,8 +9,10 @@ const SERVICE_ENDPOINT = process.env.ELICAST_ENDPOINT
 
 export default class ElicastService {
 
-  static async listElicasts () {
-    const response = await axios.get(SERVICE_ENDPOINT + '/elicast')
+  static async listElicasts (teacher = null) {
+    console.log(teacher)
+    const response = await axios.get(SERVICE_ENDPOINT + '/elicast',
+      { params: { teacher } })
     return response.data.elicasts
   }
 
@@ -49,25 +51,27 @@ export default class ElicastService {
     )
   }
 
-  static async saveElicast (elicast) {
+  static async saveElicast (elicast, teacher = null) {
     const response = await axios.put(SERVICE_ENDPOINT + '/elicast',
       qs.stringify({
         title: elicast.title,
         ots: JSON.stringify(elicast.ots),
         voice_blobs: JSON.stringify(
-          await Promise.all(elicast.voiceBlobs.map(blobUtil.blobToDataURL)))
+          await Promise.all(elicast.voiceBlobs.map(blobUtil.blobToDataURL))),
+        teacher
       }))
 
     return response.data.elicast.id
   }
 
-  static async updateElicast (elicastId, elicast) {
+  static async updateElicast (elicastId, elicast, teacher = null) {
     await axios.post(SERVICE_ENDPOINT + '/elicast/' + elicastId,
       qs.stringify({
         title: elicast.title,
         ots: JSON.stringify(elicast.ots),
         voice_blobs: JSON.stringify(
-          await Promise.all(elicast.voiceBlobs.map(blobUtil.blobToDataURL)))
+          await Promise.all(elicast.voiceBlobs.map(blobUtil.blobToDataURL))),
+        teacher
       }))
   }
 

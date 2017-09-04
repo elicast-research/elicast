@@ -12,6 +12,7 @@
     <component ref="editorPlaceholder" :is="currentEditor"></component>
     <LoadSaveModal ref="loadSaveModal"
                    :enableRemoveButton="true"
+                   :teacher="teacher"
                    @elicastLoaded="loadSaveModalElicastLoaded"
                    @elicastSaved="loadSaveModalElicastSaved"></LoadSaveModal>
   </div>
@@ -39,7 +40,8 @@ export default {
   data () {
     return {
       currentEditor: { template: '<div>Loading...</div>' },
-      displayLoadSaveButton: false
+      displayLoadSaveButton: false,
+      teacher: null
     }
   },
 
@@ -53,6 +55,7 @@ export default {
       this.reloadElicast(INIT_ELICAST)
       this.displayLoadSaveButton = true
     }
+    this.teacher = params.teacher
   },
 
   methods: {

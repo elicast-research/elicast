@@ -7,6 +7,7 @@
     <h5>/* Elicast */</h5>
     <component ref="playerPlaceholder" :is="currentPlayer"></component>
     <LoadSaveModal ref="loadSaveModal"
+                   :teacher="teacher"
                    @elicastLoaded="loadSaveModalElicastLoaded"></LoadSaveModal>
   </div>
 </template>
@@ -43,7 +44,8 @@ export default {
 
   data () {
     return {
-      currentPlayer: null
+      currentPlayer: null,
+      teacher: null
     }
   },
 
@@ -55,6 +57,7 @@ export default {
     } else {
       this.showLoadSaveModal()
     }
+    this.teacher = params.teacher
   },
 
   methods: {

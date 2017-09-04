@@ -6,7 +6,8 @@
           <h5 class="modal-title">Load/Save</h5>
         </div>
         <div class="modal-body">
-          <div v-show="elicasts == null">Loading...</div>
+          <div v-show="elicasts === null">Loading...</div>
+          <div v-show="elicasts !== null && elicasts.length === 0">Empty!</div>
           <ul class="elicast-list">
             <li class="elicast-item clearfix" v-for="elicast in elicasts">
               <a class="elicast-item-load" @click="loadElicast(elicast.id)">
@@ -49,6 +50,10 @@ export default {
     enableRemoveButton: {
       type: Boolean,
       default: false
+    },
+    teacher: {
+      type: String,
+      default: null
     }
   },
 
@@ -95,7 +100,7 @@ export default {
       this.isShow = true
       this.modalInstance.show()
 
-      this.elicasts = await ElicastService.listElicasts()
+      this.elicasts = await ElicastService.listElicasts(this.teacher)
     },
     async loadElicast (elicastId) {
       const elicast = await ElicastService.loadElicast(elicastId)
@@ -108,25 +113,23 @@ export default {
         return
       }
 
-      await ElicastService.deleteElicast(elicast.id)
+      await ElicastService.removeElicast(elicast.id)
 
       // refresh the list
-      this.elicasts = await ElicastService.listElicasts()
+      this.elicasts = await ElicastService.listElicasts(this.teacher)
     },
     async overwriteElicast (elicast) {
       const newElicast = this.editingElicast
-
       if (!confirm('Do you really want to overwrite [' +
           elicast.title + '] with [' + newElicast.title + ']?')) {
         return
       }
 
-      await ElicastService.updateElicast(elicast.id, newElicast)
+      await ElicastService.updateElicast(elicast.id, newElicast, this.teacher)
       await this.loadElicast(elicast.id)
     },
     async saveNewElicast () {
-      const newElicastId = await ElicastService.saveElicast(this.editingElicast)
-
+      const newElicastId = await ElicastService.saveElicast(this.editingElicast, this.teacher)
       this.editingElicast.id = newElicastId
       this.$emit('elicastSaved', this.editingElicast)
       this.close()

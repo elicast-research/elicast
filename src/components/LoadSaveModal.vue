@@ -15,7 +15,7 @@
                 <span class="elicast-item-title">{{ elicast.title }}</span>
                 <span class="elicast-item-created">{{ elicast.created | formatTimestamp }}</span>
               </a>
-              <span v-show="editingElicast != null" class="pull-right elicast-item-extra-menu">
+              <span v-show="editingElicast != null && !elicast.is_protected" class="pull-right elicast-item-extra-menu">
                 <a class="elicast-item-overwrite" @click="overwriteElicast(elicast)">
                   <i class="fa fa-floppy-o" title="overwrite"></i>
                 </a>

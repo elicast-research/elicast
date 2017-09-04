@@ -1,13 +1,14 @@
 import { Howl } from 'howler'
 
 /**
- *  RecordSound
+ *  SoundManager
  */
-export default class RecordSound {
+export default class SoundManager {
   constructor (mimeType, recordedBlobs = null) {
     this.mediaRecorder = null
     this.mimeType = mimeType
     this.chunks = recordedBlobs !== null ? recordedBlobs : []
+    this.tempChunks = []
   }
 
   async record () {
@@ -15,6 +16,7 @@ export default class RecordSound {
     this.mediaRecorder = new MediaRecorder(stream, { mimeType: this.mimeType })
     this.mediaRecorder.ondataavailable = this._onDataAvailable.bind(this)
     this.mediaRecorder.start()
+    return this.chunks.length
   }
 
   async stopRecording () {
@@ -25,10 +27,13 @@ export default class RecordSound {
 
     this.mediaRecorder.stop()
     await stopPromise
+
+    this.chunks.push(new Blob(this.tempChunks, { type: this.mimeType }))
+    this.tempChunks = []
   }
 
-  async load () {
-    const blobUrl = URL.createObjectURL(new Blob(this.chunks, { type: this.mimeType }))
+  async load (chunkIdx) {
+    const blobUrl = URL.createObjectURL(this.chunks[chunkIdx])
     const sound = new Howl({ src: [blobUrl], format: ['webm'] })
 
     await new Promise((resolve, reject) => sound.once('load', resolve))
@@ -36,6 +41,6 @@ export default class RecordSound {
   }
 
   _onDataAvailable (event) {
-    this.chunks.push(event.data)
+    this.tempChunks.push(event.data)
   }
 }

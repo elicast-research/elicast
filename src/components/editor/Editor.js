@@ -1,10 +1,10 @@
-import ElicastOT, { ElicastNop, ElicastSelection, ElicastText,
-  ElicastExercise, ElicastRun, ElicastAssert } from '@/elicast/elicast-ot'
+import ElicastOT, { ElicastRecordStart, ElicastRecordEnd, ElicastSelection,
+  ElicastText, ElicastExercise, ElicastRun, ElicastAssert } from '@/elicast/elicast-ot'
 import Elicast from '@/elicast/elicast'
 import ElicastService from '@/elicast/elicast-service'
 import RecordExerciseSession from './record-exercise-session'
 import RecordAssertSession from './record-assert-session'
-import RecordSound from './record-sound'
+import SoundManager from '@/components/sound-manager'
 import Slider from '@/components/Slider'
 import RunOutputView from '@/components/RunOutputView'
 import Toast from '@/components/Toast'
@@ -91,7 +91,7 @@ export default {
       recordStartOt: null,
       recordExerciseSession: null,
       recordAssertSession: null,
-      recordSound: new RecordSound('audio/webm', this.elicast ? this.elicast.voiceBlobs : null),
+      soundManager: new SoundManager('audio/webm', this.elicast ? this.elicast.voiceBlobs : null),
       runOutput: null,
       playbackSound: null,
       playbackStartTs: -1,
@@ -126,7 +126,7 @@ export default {
       return this.playMode.isRecording() ? 'red' : 'black'
     },
     currentElicast () {
-      return new Elicast(this.elicastId, this.elicastTitle, this.ots, this.recordSound.chunks)
+      return new Elicast(this.elicastId, this.elicastTitle, this.ots, this.soundManager.chunks)
     }
   },
 
@@ -156,6 +156,7 @@ export default {
       let shouldRedrawExerciseAreas = false
       let shouldRedrawAssertAreas = false
       let shouldRedrawRunOutput = false
+      let shouldRestartPlaybackSound = false
 
       const isBigJump = Math.abs(newOtIdx - prevOtIdx) > 10
 
@@ -185,6 +186,8 @@ export default {
         } else if (ot instanceof ElicastAssert) {
           this.playAreaType = this.playAreaType === PlayAreaType.TEXT
             ? PlayAreaType.ASSERT : PlayAreaType.TEXT
+        } else if (ot instanceof ElicastRecordStart) {
+          shouldRestartPlaybackSound = true
         }
       }
       // prevOtIdx > newOtIdx
@@ -215,6 +218,7 @@ export default {
       // if playMode is not playback, always redraw when ts changes
       shouldRedrawExerciseAreas = shouldRedrawExerciseAreas || this.playMode !== PlayMode.PLAYBACK
       shouldRedrawRunOutput = shouldRedrawRunOutput || this.playMode !== PlayMode.PLAYBACK
+      shouldRestartPlaybackSound = shouldRestartPlaybackSound && this.playMode === PlayMode.PLAYBACK
 
       // restore exercise areas
       if (shouldRedrawExerciseAreas) {
@@ -230,6 +234,10 @@ export default {
         this.redrawRunOutput()
       }
 
+      if (shouldRestartPlaybackSound) {
+        this.restartPlaybackSound()
+      }
+
       // restore selection
       this.redrawSelection()
       if (ts === this.maxTs) {
@@ -242,27 +250,25 @@ export default {
     async playMode (playMode, prevPlayMode) {
       if (!prevPlayMode.isRecording() && playMode === PlayMode.RECORD) {
         // start recording
-        await this.recordSound.record()
+        const soundChunkIdx = await this.soundManager.record()
 
         // the last OT is a 'nop' OT marking the end of the last recording
         const lastTs = this.ots.length ? this.ots[this.ots.length - 1].ts : 0
-        this.recordStartOt = new ElicastNop(lastTs)
+        this.recordStartOt = new ElicastRecordStart(lastTs, soundChunkIdx)
         this.ots.push(this.recordStartOt)
 
         if (this.recordTimer !== -1) throw new Error('recordTimer is not cleared')
         this.recordTimer = setInterval(this.recordTick, RECORD_TICK)
       } else if (prevPlayMode === PlayMode.RECORD && !playMode.isRecording()) {
         // end recording
+        await this.soundManager.stopRecording()
 
         const ts = this.recordStartOt.getRelativeTS()
-        this.ots.push(new ElicastNop(ts))
+        this.ots.push(new ElicastRecordEnd(ts))
         this.recordStartOt = null
-
-        await this.recordSound.stopRecording()
 
         clearInterval(this.recordTimer)
         this.recordTimer = -1
-        this.recordAudioChunks = null
       } else if (prevPlayMode === PlayMode.RECORD && playMode === PlayMode.RECORD_EXERCISE) {
         // start recording exercise
         const lastExerciseOt = ElicastOT.getLastOtForOtType(this.ots, ElicastExercise)
@@ -285,7 +291,6 @@ export default {
         const lastTs = this.ots.length ? this.ots[this.ots.length - 1].ts : 0
         this.recordStartOt = this.recordAssertSession.startRecording(lastTs)
 
-        await this.recordSound.record()
         if (this.recordTimer !== -1) throw new Error('recordTimer is not cleared')
         this.recordTimer = setInterval(this.recordTick, RECORD_TICK)
       } else if (prevPlayMode === PlayMode.ASSERT && playMode === PlayMode.STANDBY_ASSERT) {
@@ -294,11 +299,10 @@ export default {
         this.recordAssertSession.finishRecording(ts)
         this.recordAssertSession = null
 
-        await this.recordSound.stopRecording()
         this.recordStartOt = null
         clearInterval(this.recordTimer)
         this.recordTimer = -1
-        this.recordAudioChunks = null
+
         ElicastOT.redrawAssertAreas(this.cm, this.ots)
         ElicastOT.clearRecordingAssertArea(this.cm)
       } else if (playMode === PlayMode.PLAYBACK) {
@@ -310,9 +314,7 @@ export default {
         // restore run output
         this.redrawRunOutput()
 
-        this.playbackSound = await this.recordSound.load()
-        this.playbackSound.seek(this.ts / 1000)
-        this.playbackSound.play()
+        await this.restartPlaybackSound()
 
         this.playbackStartTs = this.ts
         this.playbackStartTime = Date.now()
@@ -377,6 +379,17 @@ export default {
         this.runOutput = ''
       }
     },
+    async restartPlaybackSound () {
+      if (!_.isNull(this.playbackSound)) {
+        this.playbackSound.stop()
+        this.playbackSound = null
+      }
+
+      const lastRecordStartOt = ElicastOT.getLastOtForOtType(this.ots, ElicastRecordStart, this.ts)
+      this.playbackSound = await this.soundManager.load(lastRecordStartOt.soundChunkIdx)
+      this.playbackSound.seek((this.ts - lastRecordStartOt.ts) / 1000)
+      this.playbackSound.play()
+    },
     async runCode () {
       let ts = this.recordStartOt.getRelativeTS()
       const runStartOT = new ElicastRun(ts)
@@ -429,19 +442,24 @@ export default {
         content: '<i class="fa fa-scissors"></i> Cutting...'
       })
 
+      const lastRecordStartOt = _.findLast(this.ots, ot => ot.ts <= this.ts &&
+        ot.constructor === ElicastRecordStart)
+      const lastSoundChunkIdx = lastRecordStartOt.soundChunkIdx
+
       const audioSplitResponse = await axios.post('http://anne.pjknkda.com:7822/audio/split',
         qs.stringify({
-          segments: JSON.stringify([[0, this.ts]]),
-          audio_blobs: JSON.stringify(
-            await Promise.all(this.recordSound.chunks.map(blobUtil.blobToDataURL)))
+          segments: JSON.stringify([[0, this.ts - lastRecordStartOt.ts]]),
+          audio_blobs: JSON.stringify([
+            await blobUtil.blobToDataURL(this.soundManager.chunks[lastSoundChunkIdx])])
         }))
 
-      this.recordSound = new RecordSound('audio/webm',
-        await blobUtil.dataURLToBlob(audioSplitResponse.data.outputs[0]))
+      const reducedChunk = await blobUtil.dataURLToBlob(audioSplitResponse.data.outputs[0])
+      this.soundManager.chunks.splice(
+        lastSoundChunkIdx, this.soundManager.chunks.length - lastSoundChunkIdx, reducedChunk)
 
       this.maxTs = this.ts
       this.ots.splice(firstCutOtIdx, this.ots.length - firstCutOtIdx)
-      this.ots.push(new ElicastNop(this.ts + 1))  // Trick to invoke ts update
+      this.ots.push(new ElicastRecordEnd(this.ts + 1))  // Trick to invoke ts update
       this.ts += 1
 
       this.$refs.toast.remove(toast)

@@ -1,4 +1,5 @@
-import ElicastOT, { ElicastText, ElicastSelection, ElicastRun, ElicastExercise, ElicastAssert } from '@/elicast/elicast-ot'
+import ElicastOT, { ElicastRecordStart, ElicastSelection,
+  ElicastText, ElicastRun, ElicastExercise, ElicastAssert } from '@/elicast/elicast-ot'
 import ElicastService from '@/elicast/elicast-service'
 import SolveExerciseSession from './solve-exercise-session'
 import Slider from '@/components/Slider'
@@ -10,8 +11,8 @@ import 'codemirror/mode/python/python'
 import _ from 'lodash'
 import axios from 'axios'
 import qs from 'qs'
-import { Howl } from 'howler'
 import dateFormat from 'date-fns/format'
+import SoundManager from '@/components/sound-manager'
 
 class PlayMode {
   static PLAYBACK = new PlayMode('playback')
@@ -62,10 +63,8 @@ export default {
       playModeReady: true,
       maxTs: 0,
       runOutput: null,
-      playbackSound: new Howl({
-        src: [URL.createObjectURL(new Blob(this.elicast.voiceBlobs))],
-        format: ['webm']
-      }),
+      soundManager: new SoundManager('audio/webm', this.elicast.voiceBlobs),
+      playbackSound: null,
       playbackStartTs: -1,
       playbackStartTime: -1,
 
@@ -102,6 +101,7 @@ export default {
 
       let shouldRedrawExerciseAreas = false
       let shouldRedrawRunOutput = false
+      let shouldRestartPlaybackSound = false
 
       this.dirty = this.dirty || Math.abs(newOtIdx - prevOtIdx) > 10
 
@@ -126,6 +126,8 @@ export default {
           shouldRedrawRunOutput = true
         } else if (ot instanceof ElicastExercise && !ot._solved) {
           this.playMode = PlayMode.SOLVE_EXERCISE
+        } else if (ot instanceof ElicastRecordStart) {
+          shouldRestartPlaybackSound = true
         }
       }
 
@@ -149,6 +151,7 @@ export default {
       // if playMode is not playback, always redraw when ts changes
       shouldRedrawExerciseAreas = shouldRedrawExerciseAreas || this.dirty
       shouldRedrawRunOutput = shouldRedrawRunOutput || this.dirty
+      shouldRestartPlaybackSound = shouldRestartPlaybackSound && this.playMode === PlayMode.PLAYBACK
 
       // restore exercise areas
       if (shouldRedrawExerciseAreas) {
@@ -158,6 +161,10 @@ export default {
       // restore run output
       if (shouldRedrawRunOutput) {
         this.redrawRunOutput()
+      }
+
+      if (shouldRestartPlaybackSound) {
+        this.restartPlaybackSound()
       }
 
       // restore selection
@@ -180,8 +187,7 @@ export default {
           this.ts = 0
         }
 
-        this.playbackSound.seek(this.ts / 1000)
-        this.playbackSound.play()
+        await this.restartPlaybackSound()
 
         this.playbackStartTs = this.ts
         this.playbackStartTime = Date.now()
@@ -194,6 +200,7 @@ export default {
       } else if (prevPlayMode === PlayMode.PLAYBACK) {
         // pause playback
         this.playbackSound.stop()
+        this.playbackSound = null
 
         this.playbackStartTs = -1
         this.playStartTime = -1
@@ -268,6 +275,17 @@ export default {
       } else {
         this.runOutput = ''
       }
+    },
+    async restartPlaybackSound () {
+      if (!_.isNull(this.playbackSound)) {
+        this.playbackSound.stop()
+        this.playbackSound = null
+      }
+
+      const lastRecordStartOt = ElicastOT.getLastOtForOtType(this.ots, ElicastRecordStart, this.ts)
+      this.playbackSound = await this.soundManager.load(lastRecordStartOt.soundChunkIdx)
+      this.playbackSound.seek((this.ts - lastRecordStartOt.ts) / 1000)
+      this.playbackSound.play()
     },
     async runCode () {
       const runStartOT = new ElicastRun(0)

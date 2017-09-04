@@ -1,5 +1,6 @@
 import _ from 'lodash'
 
+import OTArea from './ot-area'
 import ElicastOTAreaSet from './elicast-ot-area-set'
 
 /*  OT for Elicast
@@ -595,10 +596,15 @@ ElicastOT.isChangeAllowedForSolveExercise = function (ots, solveExerciseSession,
 }
 
 ElicastOT.replacePartialOts = function (ots, startIdx, amount, newOts) {
+  // only support single area exercise
   const oriOtsArea = getAreas(ots.slice(startIdx, startIdx + amount)).pop()
   const oriOtsAreaLength = oriOtsArea.toPos - oriOtsArea.fromPos
-  const newOtsArea = getAreas(newOts).pop() // only support one area
+
+  const newOtsArea = getAreas(newOts).pop() ||
+    // if no solve area (solution is empty text), build a mock empty OTArea
+    new OTArea(ElicastOTAreaSet.TEXT, oriOtsArea.fromPos, oriOtsArea.fromPos)
   const newOtsAreaLength = newOtsArea.toPos - newOtsArea.fromPos
+
   const deltaLength = newOtsAreaLength - oriOtsAreaLength
 
   ots.splice(startIdx, amount, ...newOts)

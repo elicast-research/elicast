@@ -215,16 +215,15 @@ export default {
           this.solveExerciseSession.start()
         }
 
-        // apply ots until it reaches the first ElicastText ot
-        for (let i = 0; i < this.ots.length; i++) {
-          const ot = this.ots[i]
-          if (ot.ts > this.ts && ot._exId) {
-            if (ot instanceof ElicastText) break
-            ElicastOT.applyOtToCM(this.cm, ot)
-          }
-        }
+        // restore code
+        const code = ElicastOT.buildText(this.ots.slice(0, this.solveExerciseSession.exerciseStartIndex))
+        this.cm.setValue(code)
 
-        // apply previous solveOts before playMode changes to SOLVE_EXERCISE
+        // restore selection to right before text change
+        const previousSelectionOt = ElicastOT.getLastOtForOtType(
+          this.ots, ElicastSelection, this.solveExerciseSession.exerciseStartOt.ts)
+        if (previousSelectionOt) ElicastOT.applyOtToCM(this.cm, previousSelectionOt)
+
         this.solveExerciseSession.solveOts
           .filter(ot => ot instanceof ElicastText)
           .forEach(ot => ElicastOT.applyOtToCM(this.cm, ot))
@@ -366,7 +365,7 @@ export default {
     },
     handleEditorBeforeChange (cm, changeObj) {
       if (this.playMode !== PlayMode.SOLVE_EXERCISE) return
-      if (!changeObj.origin) return // ignore restoring solveOts
+      if (!changeObj.origin || changeObj.origin === 'setValue') return // ignore restoring solveOts
 
       if (!ElicastOT.isChangeAllowedForSolveExercise(this.ots, this.solveExerciseSession, cm, changeObj)) {
         console.warn('Editing non-editable area')
@@ -398,9 +397,15 @@ export default {
       }
     },
     handleSliderChange (val, isMouseDown) {
-      if (isMouseDown) this.playMode = PlayMode.PAUSE
+      if (val === this.ts) return
 
       if (val > this.ts) {
+        if (this.playMode === PlayMode.SOLVE_EXERCISE) {
+          // cannot move forward when solving exercise
+          this.$refs.slider.val = this.ts
+          return
+        }
+
         let prevOtIdx = this.ots.findIndex(ot => this.ts < ot.ts)
         prevOtIdx = (prevOtIdx < 0 ? this.ots.length : prevOtIdx) - 1
         let newOtIdx = this.ots.findIndex(ot => val < ot.ts)
@@ -409,14 +414,17 @@ export default {
         for (let i = prevOtIdx; i <= newOtIdx; i++) {
           const ot = this.ots[i]
           if (ot instanceof ElicastExercise && !ot._solved) {
-            val = ot.ts - 1
-            break
+            this.playMode = PlayMode.SOLVE_EXERCISE
+            this.ts = ot.ts
+            this.$refs.slider.val = ot.ts
+            return
           }
         }
-
-        this.$refs.slider.val = val
       }
 
+      if (isMouseDown) {
+        this.playMode = PlayMode.PAUSE
+      }
       this.ts = val
     },
     playbackTick () {

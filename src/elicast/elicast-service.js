@@ -10,7 +10,6 @@ const SERVICE_ENDPOINT = process.env.ELICAST_ENDPOINT
 export default class ElicastService {
 
   static async listElicasts (teacher = null) {
-    console.log(teacher)
     const response = await axios.get(SERVICE_ENDPOINT + '/elicast',
       { params: { teacher } })
     return response.data.elicasts

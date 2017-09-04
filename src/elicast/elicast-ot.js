@@ -283,8 +283,16 @@ function getAreas (ots, areaType = ElicastOTAreaSet.TEXT) {
   return areaSet.toArray()
 }
 
-ElicastOT.getPreviousOtForOtType = function (ots, otType, ts) {
-  return _.findLast(ots, ot => ot.ts < ts && ot.constructor === otType)
+/**
+ * Get the last OT whose type is `otType` and ts is less or equal than given `ts` in `ots`.
+ *
+ * @param  {type} ots    sorted array of OTs
+ * @param  {type} otType type reference (class constructor) of an OT type
+ * @param  {type} ts     ts to look left
+ * @return {type}        found OT
+ */
+ElicastOT.getLastOtForOtType = function (ots, otType, ts) {
+  return _.findLast(ots, ot => ot.ts <= ts && ot.constructor === otType)
 }
 
 ElicastOT.buildText = function (ots) {

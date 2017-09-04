@@ -95,4 +95,15 @@ export default class ElicastService {
 
     return await blobUtil.dataURLToBlob(response.data.outputs[0])
   }
+
+  static async checkAnswer (elicastId, exId, solveOts, code) {
+    const response = await axios.post(SERVICE_ENDPOINT + '/code/answer/' + elicastId,
+      qs.stringify({
+        ex_id: exId,
+        solve_ots: JSON.stringify(solveOts),
+        code: code
+      }))
+
+    return response.data.exit_code
+  }
 }

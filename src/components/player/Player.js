@@ -9,8 +9,6 @@ import { codemirror } from 'vue-codemirror'
 import 'codemirror/addon/selection/mark-selection'
 import 'codemirror/mode/python/python'
 import _ from 'lodash'
-import axios from 'axios'
-import qs from 'qs'
 import dateFormat from 'date-fns/format'
 import SoundManager from '@/components/sound-manager'
 
@@ -320,16 +318,12 @@ export default {
         content: '<i class="fa fa-check"></i> Checking answer...'
       })
 
-      const response = await axios.post('http://anne.pjknkda.com:7822/code/answer/' + this.elicastId,
-        qs.stringify({
-          ex_id: session.exId,
-          solve_ots: JSON.stringify(session.solveOts),
-          code: ElicastOT.buildText(mockOts)
-        }))
+      const solveCode = ElicastOT.buildText(mockOts)
+      const exitCode = await ElicastService.checkAnswer(this.elicastId, session.exId, session.solveOts, solveCode)
 
       this.$refs.toast.remove(checkAnswerToast)
 
-      if (response.data.exit_code === 0) {
+      if (exitCode === 0) {
         ElicastOT.replacePartialOts(this.ots, session.exerciseStartIndex + 1, solutionOtsLength, session.solveOts)
 
         this.solveExerciseSession.finish()

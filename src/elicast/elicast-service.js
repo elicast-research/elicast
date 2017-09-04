@@ -5,7 +5,7 @@ import _ from 'lodash'
 import blobUtil from 'blob-util'
 import qs from 'qs'
 
-const SERVICE_ENDPOINT = 'http://anne.pjknkda.com:7822'
+const SERVICE_ENDPOINT = process.env.ELICAST_ENDPOINT
 
 export default class ElicastService {
 

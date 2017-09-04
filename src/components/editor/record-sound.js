@@ -31,7 +31,7 @@ export default class RecordSound {
     const blobUrl = URL.createObjectURL(new Blob(this.chunks, { type: this.mimeType }))
     const sound = new Howl({ src: [blobUrl], format: ['webm'] })
 
-    await Promise.fromCallback(callback => sound.once('load', callback))
+    await new Promise((resolve, reject) => sound.once('load', resolve))
     return sound
   }
 

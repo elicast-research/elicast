@@ -1,6 +1,7 @@
 import ElicastOT, { ElicastNop, ElicastSelection, ElicastText,
   ElicastExercise, ElicastRun, ElicastAssert } from '@/elicast/elicast-ot'
 import Elicast from '@/elicast/elicast'
+import ElicastService from '@/elicast/elicast-service'
 import RecordExerciseSession from './record-exercise-session'
 import RecordAssertSession from './record-assert-session'
 import RecordSound from './record-sound'
@@ -388,12 +389,10 @@ export default {
         content: '<i class="fa fa-terminal"></i> Running...'
       })
 
-      const response = await axios.post('http://anne.pjknkda.com:7822/code/run', qs.stringify({
-        code: this.code
-      }))
+      const [exitCode, output] = await ElicastService.runCode(this.code)
 
       ts = this.recordStartOt.getRelativeTS()
-      const runResultOT = new ElicastRun(ts, response.data.exit_code, response.data.output)
+      const runResultOT = new ElicastRun(ts, exitCode, output)
       this.ots.push(runResultOT)
       this.redrawRunOutput(runResultOT)
       this.playModeReady = true
@@ -451,12 +450,10 @@ export default {
     },
     async evaluateAssertion () {
       this.runOutput = '/* running... */'
-      const response = await axios.post('http://anne.pjknkda.com:7822/code/run', qs.stringify({
-        code: this.code
-      }))
-      this.runOutput = response.data.output
+      const [exitCode, output] = await ElicastService.runCode(this.code)
+      this.runOutput = output
 
-      return response.data.exit_code === 0
+      return exitCode === 0
     },
     handleEditorBeforeChange (cm, changeObj) {
       if (!this.playMode.isRecording()) return

@@ -1,4 +1,5 @@
 import ElicastOT, { ElicastText, ElicastSelection, ElicastRun, ElicastExercise, ElicastAssert } from '@/elicast/elicast-ot'
+import ElicastService from '@/elicast/elicast-service'
 import SolveExerciseSession from './solve-exercise-session'
 import Slider from '@/components/Slider'
 import RunOutputView from '@/components/RunOutputView'
@@ -278,11 +279,9 @@ export default {
         content: '<i class="fa fa-terminal"></i> Running...'
       })
 
-      const response = await axios.post('http://anne.pjknkda.com:7822/code/run', qs.stringify({
-        code: this.code
-      }))
+      const [exitCode, output] = await ElicastService.runCode(this.code)
 
-      const runResultOT = new ElicastRun(0, response.data.exit_code, response.data.output)
+      const runResultOT = new ElicastRun(0, exitCode, output)
       this.redrawRunOutput(runResultOT)
       this.playModeReady = true
 

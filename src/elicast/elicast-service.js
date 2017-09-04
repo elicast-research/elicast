@@ -75,4 +75,11 @@ export default class ElicastService {
     await axios.delete(SERVICE_ENDPOINT + '/elicast/' + elicastId)
   }
 
+  static async runCode (code) {
+    const response = await axios.post(SERVICE_ENDPOINT + '/code/run',
+      qs.stringify({ code }))
+
+    return [response.data.exit_code, response.data.output]
+  }
+
 }

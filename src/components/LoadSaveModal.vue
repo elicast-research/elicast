@@ -40,15 +40,9 @@
 </template>
 
 <script>
-import Elicast from '@/elicast/elicast'
-import axios from 'axios'
-import blobUtil from 'blob-util'
+import ElicastService from '@/elicast/elicast-service'
 import dateFormat from 'date-fns/format'
 import Modal from 'exports-loader?Modal!bootstrap/js/dist/modal'
-import _ from 'lodash'
-import qs from 'qs'
-
-import ElicastOT, { ElicastExercise, ElicastAssert } from '@/elicast/elicast-ot'
 
 export default {
   props: {
@@ -101,42 +95,10 @@ export default {
       this.isShow = true
       this.modalInstance.show()
 
-      const response = await axios.get('http://anne.pjknkda.com:7822/elicast')
-      this.elicasts = response.data.elicasts
+      this.elicasts = await ElicastService.listElicasts()
     },
     async loadElicast (elicastId) {
-      const response = await axios.get('http://anne.pjknkda.com:7822/elicast/' + elicastId)
-      const elicastRaw = response.data.elicast
-
-      const ots = elicastRaw.ots.map(ElicastOT.fromJSON)
-
-      let lastExId = null
-      let lastAssert = null
-      for (let i = 0; i < ots.length; i++) {
-        const ot = ots[i]
-        if (ot instanceof ElicastExercise) {
-          lastExId = _.isNull(lastExId) ? ot.exId : null
-        } else if (!_.isNull(lastExId)) {
-          ot._exId = lastExId
-        } else if (!_.isUndefined(ot._exId)) {
-          delete ot._exId
-        }
-
-        if (ot instanceof ElicastAssert) {
-          lastAssert = _.isNull(lastAssert) ? true : null
-        } else if (!_.isNull(lastAssert)) {
-          ot._assert = lastAssert
-        } else if (!_.isUndefined(ot._assert)) {
-          delete ot._assert
-        }
-      }
-
-      const elicast = new Elicast(
-        elicastRaw.id,
-        elicastRaw.title,
-        ots,
-        await Promise.all(elicastRaw.voice_blobs.map(blobUtil.dataURLToBlob))
-      )
+      const elicast = await ElicastService.loadElicast(elicastId)
 
       this.$emit('elicastLoaded', elicast)
       this.close()
@@ -146,11 +108,10 @@ export default {
         return
       }
 
-      await axios.delete('http://anne.pjknkda.com:7822/elicast/' + elicast.id)
+      await ElicastService.deleteElicast(elicast.id)
 
       // refresh the list
-      const response = await axios.get('http://anne.pjknkda.com:7822/elicast')
-      this.elicasts = response.data.elicasts
+      this.elicasts = await ElicastService.listElicasts()
     },
     async overwriteElicast (elicast) {
       const newElicast = this.editingElicast
@@ -160,28 +121,15 @@ export default {
         return
       }
 
-      await axios.post('http://anne.pjknkda.com:7822/elicast/' + elicast.id,
-        qs.stringify({
-          title: newElicast.title,
-          ots: JSON.stringify(newElicast.ots),
-          voice_blobs: JSON.stringify(
-            await Promise.all(elicast.voiceBlobs.map(blobUtil.blobToDataURL)))
-        }))
+      await ElicastService.updateElicast(elicast.id, newElicast)
 
       await this.loadElicast(elicast.id)
     },
     async saveNewElicast () {
-      const elicast = this.editingElicast
-      const response = await axios.put('http://anne.pjknkda.com:7822/elicast',
-        qs.stringify({
-          title: elicast.title,
-          ots: JSON.stringify(elicast.ots),
-          voice_blobs: JSON.stringify(
-            await Promise.all(elicast.voiceBlobs.map(blobUtil.blobToDataURL)))
-        }))
+      const newElicastId = await ElicastService.saveElicast(this.editingElicast)
 
-      elicast.id = response.data.elicast.id
-      this.$emit('elicastSaved', elicast)
+      this.editingElicast.id = newElicastId
+      this.$emit('elicastSaved', this.editingElicast)
       this.close()
     }
   },

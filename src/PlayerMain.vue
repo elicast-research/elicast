@@ -13,9 +13,10 @@
 
 <script>
 import ElicastPlayer from '@/components/Player'
-// import Elicast from '@/elicast/elicast'
+import ElicastService from '@/elicast/elicast-service'
 import LoadSaveModal from '@/components/LoadSaveModal'
 import _ from 'lodash'
+import qs from 'qs'
 
 function newElicastPlayer (elicast) {
   return {
@@ -47,7 +48,13 @@ export default {
   },
 
   mounted (t) {
-    this.showLoadSaveModal()
+    const params = qs.parse(window.location.search.substr(1))
+    if (params.id) {
+      ElicastService.loadElicast(params.id)
+        .then(this.reloadElicast)
+    } else {
+      this.showLoadSaveModal()
+    }
   },
 
   methods: {

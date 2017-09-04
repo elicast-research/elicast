@@ -362,11 +362,11 @@ export default {
 
   methods: {
     redrawSelection () {
-      const previousSelectionOt = ElicastOT.getPreviousOtForOtType(this.ots, ElicastSelection, this.ts)
+      const previousSelectionOt = ElicastOT.getLastOtForOtType(this.ots, ElicastSelection, this.ts)
       if (previousSelectionOt) ElicastOT.applyOtToCM(this.cm, previousSelectionOt)
     },
     redrawRunOutput (runOt) {
-      runOt = runOt || ElicastOT.getPreviousOtForOtType(this.ots, ElicastRun, this.ts)
+      runOt = runOt || ElicastOT.getLastOtForOtType(this.ots, ElicastRun, this.ts)
       if (runOt) {
         this.runOutput = runOt.isRunning() ? '/* running... */' : runOt.output
       } else {

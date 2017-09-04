@@ -14,20 +14,16 @@
 </template>
 
 <script>
-// import { ElicastText, ElicastSelection } from '@/elicast/elicast-ot'
 import Elicast from '@/elicast/elicast'
+import { ElicastSelection } from '@/elicast/elicast-ot'
+import ElicastService from '@/elicast/elicast-service'
 import ElicastEditor from '@/components/editor'
 import LoadSaveModal from '@/components/LoadSaveModal'
 import _ from 'lodash'
+import qs from 'qs'
 
-// const INITIAL_CODE = `def hello(thing):
-//   print(f"hello, {thing}!")
-//
-// hello("world")`
-
-const SAMPLE_ELICAST = new Elicast(null, 'Sample elicast', [
-  // new ElicastText(0, 0, 0, INITIAL_CODE, ''),
-  // new ElicastSelection(0, 0, 0)
+const INIT_ELICAST = new Elicast(null, 'Unnamed elicast', [
+  new ElicastSelection(0, 0, 0)
 ], null)
 
 export default {
@@ -43,7 +39,13 @@ export default {
   },
 
   mounted (t) {
-    this.reloadElicast(SAMPLE_ELICAST)
+    const params = qs.parse(window.location.search.substr(1))
+    if (params.id) {
+      ElicastService.loadElicast(params.id)
+        .then(this.reloadElicast)
+    } else {
+      this.reloadElicast(INIT_ELICAST)
+    }
   },
 
   methods: {

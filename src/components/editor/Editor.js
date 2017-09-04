@@ -349,10 +349,15 @@ export default {
     this.cm.on('mousedown', this.handleEditorMousedown)
 
     this.ts = this.ots.length && this.ots[this.ots.length - 1].ts
+
+    window.onbeforeunload = () =>
+      'Do you want to leave this page? Changes you made may not be saved.'
   },
 
   beforeDestroy () {
     clearInterval(this.cursorBlinkTimer)
+
+    window.onbeforeunload = null
   },
 
   methods: {

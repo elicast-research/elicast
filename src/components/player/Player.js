@@ -327,7 +327,7 @@ export default {
       } else {
         this.$refs.toast.show({
           class: ['alert', 'alert-danger'],
-          content: 'Wrong answer, try again!',
+          content: 'Wrong answer, please try again!',
           lifespan: 2000
         })
       }

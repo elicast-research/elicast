@@ -63,7 +63,7 @@ var webpackConfig = merge(baseWebpackConfig, {
       chunksSortMode: 'dependency'
     }),
     new HtmlWebpackPlugin({
-      chunks: ['editor', 'manifest'],
+      chunks: ['editor', 'manifest', 'vendor'],
       filename: 'editor.html',
       template: 'html/editor.html',
       inject: true,
@@ -76,7 +76,7 @@ var webpackConfig = merge(baseWebpackConfig, {
       chunksSortMode: 'dependency'
     }),
     new HtmlWebpackPlugin({
-      chunks: ['player', 'manifest'],
+      chunks: ['player', 'manifest', 'vendor'],
       filename: 'player.html',
       template: 'html/player.html',
       inject: true,
@@ -141,9 +141,7 @@ if (config.build.productionGzip) {
 
 if (config.build.bundleAnalyzerReport) {
   var BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin
-  webpackConfig.plugins.push(new BundleAnalyzerPlugin({
-    analyzerMode: 'static'
-  }))
+  webpackConfig.plugins.push(new BundleAnalyzerPlugin())
 }
 
 module.exports = webpackConfig

@@ -120,7 +120,8 @@
               @change="handleSliderChange"
               :color="sliderColor"
               :max="maxTs"
-              :disabled="playMode.isRecording() || !playModeReady"></Slider>
+              :disabled="playMode.isRecording() || !playModeReady"
+              :overlays="sliderOverlays"></Slider>
 
       <div class="ts-display text-secondary">
         {{ tsDisplay }}

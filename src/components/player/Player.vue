@@ -65,7 +65,8 @@
               class="slider"
               @change="handleSliderChange"
               :max="maxTs"
-              :disabled="!playModeReady"></Slider>
+              :disabled="!playModeReady"
+              :overlays="sliderOverlays"></Slider>
 
       <div class="ts-display text-secondary">
         {{ tsDisplay }}

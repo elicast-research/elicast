@@ -122,6 +122,20 @@ export default {
     sliderColor () {
       return this.playMode.isRecording() ? 'red' : 'black'
     },
+    sliderOverlays () {
+      const overlayColors = {
+        [ElicastExercise]: '#E1BEE7',
+        [ElicastAssert]: '#FFCDD2'
+      }
+
+      return ElicastOT
+        .getSegments(this.ots)
+        .map(segment => ({
+          from: segment.fromTs,
+          to: segment.toTs,
+          color: overlayColors[segment.type]
+        }))
+    },
     currentElicast () {
       return new Elicast(this.elicastId, this.elicastTitle, this.ots, this.soundManager.chunks)
     }

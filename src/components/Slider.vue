@@ -17,6 +17,7 @@ const SLIDE_HEIGHT = 4
 const THUMB_WIDTH = 4
 const THUMB_HEIGHT = 10
 const DISABLED_ALPHA = 0.5
+const DEFAULT_COLOR = 'black'
 
 export default {
   props: {
@@ -34,7 +35,11 @@ export default {
     },
     color: {
       type: String,
-      default: 'black'
+      default: DEFAULT_COLOR
+    },
+    overlays: {
+      type: Array,
+      default: []
     }
   },
 
@@ -164,22 +169,37 @@ export default {
     drawDebounce: _.debounce(function () { this.draw() }, 100),
 
     draw () {
-      let canvas = this.$refs.canvas
-      let ctx = canvas.getContext('2d')
+      const canvas = this.$refs.canvas
+      const ctx = canvas.getContext('2d')
 
       ctx.globalAlpha = this.disabled ? DISABLED_ALPHA : 1
 
       ctx.clearRect(0, 0, canvas.width, canvas.height)
 
-      let color = Color(this.color)
+      const color = Color(this.color)
+      const slideFromY = canvas.height / 2 - SLIDE_HEIGHT / 2
+
+      // background
       ctx.fillStyle = color.fade(0.8).string()
-      ctx.fillRect(this.slideLeft, canvas.height / 2 - SLIDE_HEIGHT / 2, this.slideWidth, SLIDE_HEIGHT)
+      ctx.fillRect(this.slideLeft, slideFromY, this.slideWidth, SLIDE_HEIGHT)
 
+      // overlays
+      if (this.color === DEFAULT_COLOR) {
+        for (const overlay of this.overlays) {
+          const fromOffset = this.valToOffset(overlay.from)
+          const toOffset = this.valToOffset(overlay.to)
+
+          ctx.fillStyle = Color(overlay.color).fade(0.2).string()
+          ctx.fillRect(fromOffset, slideFromY, toOffset - fromOffset, SLIDE_HEIGHT)
+        }
+      }
+
+      // progress shade
+      const offset = this.valToOffset(this.val)
       ctx.fillStyle = color.fade(0.8).string()
-      ctx.fillRect(this.slideLeft, canvas.height / 2 - SLIDE_HEIGHT / 2, this.valToOffset(this.val) - this.slideLeft, SLIDE_HEIGHT)
+      ctx.fillRect(this.slideLeft, slideFromY, offset - this.slideLeft, SLIDE_HEIGHT)
 
-      let offset = this.valToOffset(this.val)
-
+      // thumb
       ctx.fillStyle = color.string()
       ctx.fillRect(offset - THUMB_WIDTH / 2, 0, THUMB_WIDTH, THUMB_HEIGHT)
     }

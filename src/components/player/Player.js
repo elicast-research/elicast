@@ -80,6 +80,21 @@ export default {
 
     tsDisplay () {
       return dateFormat(this.ts, 'm:ss') + ' / ' + dateFormat(this.maxTs, 'm:ss')
+    },
+
+    sliderOverlays () {
+      const overlayColors = {
+        [ElicastExercise]: '#E1BEE7'
+      }
+
+      return ElicastOT
+        .getSegments(this.ots)
+        .filter(segment => segment.type === ElicastExercise)
+        .map(segment => ({
+          from: segment.fromTs,
+          to: segment.toTs,
+          color: overlayColors[segment.type]
+        }))
     }
   },
 

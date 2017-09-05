@@ -640,3 +640,27 @@ ElicastOT.replacePartialOts = function (ots, startIdx, amount, newOts) {
     }
   }
 }
+
+ElicastOT.getSegments = function (ots) {
+  const segmentableTypes = [ElicastExercise, ElicastAssert]
+
+  let currentSegmentType = null
+  return ots
+    .map(ot => {
+      const otAndType = { ot, type: currentSegmentType }
+      if (segmentableTypes.includes(ot.constructor)) {
+        currentSegmentType = !currentSegmentType ? ot.constructor : null
+      }
+      return otAndType
+    })
+    .reduce((segments, { ot, type }) => {
+      const lastSegment = segments.length && segments[segments.length - 1]
+      if (!lastSegment || lastSegment.type !== type) {
+        segments.push({ fromTs: ot.ts, toTs: ot.ts, type })
+      } else {
+        lastSegment.toTs = ot.ts
+      }
+      return segments
+    }, [])
+    .filter(segment => segment.type !== null)
+}

@@ -350,14 +350,16 @@ export default {
       this.$refs.toast.remove(checkAnswerToast)
 
       if (exitCode === 0) {
-        ElicastOT.replacePartialOts(this.ots, session.exerciseStartIndex + 1, solutionOtsLength, session.solveOts)
+        this.skipExercise()
 
-        this.solveExerciseSession.finish()
-
-        this.playMode = PlayMode.PLAYBACK
-
-        this.ts = this.solveExerciseSession.exerciseEndOt.ts
-        this.solveExerciseSession = null
+        // ElicastOT.replacePartialOts(this.ots, session.exerciseStartIndex + 1, solutionOtsLength, session.solveOts)
+        //
+        // this.solveExerciseSession.finish()
+        //
+        // this.playMode = PlayMode.PLAYBACK
+        //
+        // this.ts = this.solveExerciseSession.exerciseEndOt.ts
+        // this.solveExerciseSession = null
 
         this.$refs.toast.show({
           class: ['alert', 'alert-success'],

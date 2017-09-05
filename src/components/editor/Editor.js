@@ -5,6 +5,7 @@ import ElicastService from '@/elicast/elicast-service'
 import RecordExerciseSession from './record-exercise-session'
 import RecordAssertSession from './record-assert-session'
 import SoundManager from '@/components/sound-manager'
+import Logger from '@/components/logger'
 import Slider from '@/components/Slider'
 import RunOutputView from '@/components/RunOutputView'
 import Toast from '@/components/Toast'
@@ -98,7 +99,8 @@ export default {
       recordTimer: -1,
       playbackTimer: -1,
 
-      cm: null
+      cm: null,
+      logger: null
     }
   },
 
@@ -259,6 +261,13 @@ export default {
     },
 
     async playMode (playMode, prevPlayMode) {
+      this.logger.submit('watch-play-mode', {
+        'id': this.elicastId,
+        'prev': prevPlayMode,
+        'next': playMode,
+        'ts': this.ts
+      })
+
       if (!prevPlayMode.isRecording() && playMode === PlayMode.RECORD) {
         // start recording
         const soundChunkIdx = await this.soundManager.record()
@@ -364,6 +373,8 @@ export default {
   },
 
   mounted (t) {
+    this.logger = new Logger('Editor')
+
     this.cursorBlinkTimer = setInterval(this.toggleCursorBlink, CURSOR_BLINK_RATE)
 
     this.cm = this.$refs.cm.editor
@@ -436,6 +447,11 @@ export default {
       this.$refs.toast.remove(toast)
     },
     async cutOts () {
+      this.logger.submit('cut-ots', {
+        'id': this.elicastId,
+        'ts': this.ts
+      })
+
       const firstCutOtIdx = this.ots.findIndex(ot => this.ts < ot.ts)
       if (firstCutOtIdx <= 0) return
 
@@ -543,9 +559,19 @@ export default {
       }
     },
     handleSliderChange (val, isMouseDown) {
+      this.handleSliderChangeLog(val, isMouseDown)
+
       if (isMouseDown) this.playMode = PlayMode.PAUSE
       this.ts = val
     },
+    handleSliderChangeLog: _.debounce(function (val, isMouseDown) {
+      this.logger.submit('handle-slider-change', {
+        'id': this.elicastId,
+        'playMode': this.playMode,
+        'val': val,
+        'isMouseDown': isMouseDown
+      })
+    }, 100),
     recordTick () {
       this.ts = this.recordStartOt.getRelativeTS()
     },
@@ -564,6 +590,12 @@ export default {
     togglePlayMode () {
       if (!this.playModeReady) return
 
+      this.logger.submit('toggle-play-mode', {
+        'id': this.elicastId,
+        'playMode': this.playMode,
+        'ts': this.ts
+      })
+
       const toggleState = {
         [PlayMode.PLAYBACK]: PlayMode.PAUSE,
         [PlayMode.PAUSE]: PlayMode.PLAYBACK,
@@ -578,6 +610,12 @@ export default {
     toggleRecordExercise () {
       if (!this.playModeReady) return
 
+      this.logger.submit('toggle-record-exercise', {
+        'id': this.elicastId,
+        'playMode': this.playMode,
+        'ts': this.ts
+      })
+
       const toggleState = {
         [PlayMode.RECORD]: PlayMode.RECORD_EXERCISE,
         [PlayMode.RECORD_EXERCISE]: PlayMode.RECORD
@@ -589,6 +627,12 @@ export default {
     },
     async toggleRecordAssert () {
       if (!this.playModeReady) return
+
+      this.logger.submit('toggle-record-assert', {
+        'id': this.elicastId,
+        'playMode': this.playMode,
+        'ts': this.ts
+      })
 
       let isPassed = await this.evaluateAssertion()
       if (!isPassed) {

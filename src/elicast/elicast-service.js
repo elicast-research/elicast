@@ -85,6 +85,17 @@ export default class ElicastService {
     return [response.data.exit_code, response.data.output]
   }
 
+  static async checkAnswer (elicastId, exId, solveOts, code) {
+    const response = await axios.post(SERVICE_ENDPOINT + '/code/answer/' + elicastId,
+      qs.stringify({
+        ex_id: exId,
+        solve_ots: JSON.stringify(solveOts),
+        code: code
+      }))
+
+    return response.data.exit_code
+  }
+
   static async splitAudio (segments, audioBlobs) {
     const response = await axios.post(SERVICE_ENDPOINT + '/audio/split',
       qs.stringify({
@@ -96,14 +107,19 @@ export default class ElicastService {
     return await blobUtil.dataURLToBlob(response.data.outputs[0])
   }
 
-  static async checkAnswer (elicastId, exId, solveOts, code) {
-    const response = await axios.post(SERVICE_ENDPOINT + '/code/answer/' + elicastId,
+  static async getLogTicket (name) {
+    const response = await axios.post(SERVICE_ENDPOINT + '/log/ticket',
       qs.stringify({
-        ex_id: exId,
-        solve_ots: JSON.stringify(solveOts),
-        code: code
+        name: JSON.stringify(name)
       }))
+    return response.data.ticket
+  }
 
-    return response.data.exit_code
+  static async submitLog (ticket, data) {
+    await axios.post(SERVICE_ENDPOINT + '/log/submit',
+      qs.stringify({
+        ticket: ticket,
+        data: JSON.stringify(data)
+      }))
   }
 }

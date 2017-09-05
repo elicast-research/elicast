@@ -97,7 +97,7 @@ $codeFontFamily: Menlo, Consolas, 'DejaVu Sans Mono', monospace;
   }
 
   .run-output {
-    overflow: auto;
+    overflow-y: auto;
     background-color: $outputBackgroundColor;
   }
 
@@ -105,8 +105,10 @@ $codeFontFamily: Menlo, Consolas, 'DejaVu Sans Mono', monospace;
     font-size: $outputFontSize;
     font-family: $codeFontFamily;
     line-height: $lineHeight;
-
     color: $outputFontColor;
+
+    white-space: pre-wrap;
+    word-break: break-all;
   }
 
   .resize-handle {

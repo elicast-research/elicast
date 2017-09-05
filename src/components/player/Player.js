@@ -224,6 +224,8 @@ export default {
           this.ots, ElicastSelection, this.solveExerciseSession.exerciseStartOt.ts)
         if (previousSelectionOt) ElicastOT.applyOtToCM(this.cm, previousSelectionOt)
 
+        _.defer(() => { this.$el.querySelector('.CodeMirror-scroll').scrollTop += 100 })
+
         this.solveExerciseSession.solveOts
           .filter(ot => ot instanceof ElicastText)
           .forEach(ot => ElicastOT.applyOtToCM(this.cm, ot))
@@ -378,18 +380,18 @@ export default {
       this.solveExerciseSession.pushSolveOt(newOT)
     },
     handleEditorChange (cm, changeObj) {
-      if (changeObj.origin) {
-        this.dirty = true
-      }
+      if (!changeObj.origin || changeObj.origin === 'setValue') return
+
+      this.dirty = true
 
       if (this.playMode === PlayMode.SOLVE_EXERCISE) {
         ElicastOT.redrawSolveExerciseArea(this.cm, this.solveExerciseSession.solveOts)
       }
     },
     handleEditorBeforeSelectionChange (cm, obj) {
-      if (obj.origin) {
-        this.dirty = true
-      }
+      if (!obj.origin || obj.origin === 'setValue') return
+
+      this.dirty = true
     },
     handleEditorMousedown (event) {
       if (this.playMode === PlayMode.PLAYBACK) {

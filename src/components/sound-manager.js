@@ -35,6 +35,7 @@ export default class SoundManager {
 
   async preload () {
     // load sounds 'sequentially'
+    this.sounds = []
     for (let i = 0; i < this.chunks.length; i++) {
       this.sounds[i] = await SoundManager._loadSound(this.chunks[i])
     }

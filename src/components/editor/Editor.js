@@ -473,6 +473,7 @@ export default {
         [[0, this.ts - lastRecordStartOt.ts]], this.soundManager.chunks[lastSoundChunkIdx])
       this.soundManager.chunks.splice(
         lastSoundChunkIdx, this.soundManager.chunks.length - lastSoundChunkIdx, reducedChunk)
+      await this.soundManager.preload()
 
       this.maxTs = this.ts
       this.ots.splice(firstCutOtIdx, this.ots.length - firstCutOtIdx)

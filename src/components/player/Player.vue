@@ -105,7 +105,7 @@
   .solve-exercise-block {
     padding: .2em 0;
     border-radius: .2em;
-    background-color: white;
+    background-color: rgba(255, 255, 255, 0.7);
   }
 }
 

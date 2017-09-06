@@ -5,7 +5,7 @@ import SolveExerciseSession from './solve-exercise-session'
 import Slider from '@/components/Slider'
 import RunOutputView from '@/components/RunOutputView'
 import Toast from '@/components/Toast'
-import { codemirror } from 'vue-codemirror'
+import { codemirror, CodeMirror } from 'vue-codemirror'
 import 'codemirror/addon/selection/mark-selection'
 import 'codemirror/mode/python/python'
 import _ from 'lodash'
@@ -389,10 +389,12 @@ export default {
       if (this.playMode !== PlayMode.SOLVE_EXERCISE) return
       if (!changeObj.origin || changeObj.origin === 'setValue') return // ignore restoring solveOts
 
-      if (!ElicastOT.isChangeAllowedForSolveExercise(this.ots, this.solveExerciseSession, cm, changeObj)) {
-        console.warn('Editing non-editable area')
-        changeObj.cancel()
-        return
+      const isChangeObjUpdated =
+        ElicastOT.confineChangeForSolveExercise(this.ots, this.solveExerciseSession, cm, changeObj)
+
+      if (isChangeObjUpdated) {
+        const changeEndLineCh = CodeMirror.changeEnd(changeObj)
+        _.defer(() => this.cm.setSelection(changeEndLineCh, changeEndLineCh))
       }
 
       const ts = this.solveExerciseSession.getTs()

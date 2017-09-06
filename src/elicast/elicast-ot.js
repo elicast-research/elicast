@@ -596,15 +596,11 @@ ElicastOT.isChangeAllowedForRecordExercise = function (ots, recordExerciseSessio
   return exArea.fromPos <= fromPos && toPos <= exArea.toPos
 }
 
-ElicastOT.isChangeAllowedForSolveExercise = function (ots, solveExerciseSession, cm, changeObj) {
-  const cmContent = cm.doc.getValue()
-  const fromPos = lineChToPos(cmContent, changeObj.from)
-  const toPos = lineChToPos(cmContent, changeObj.to)
-
+ElicastOT.getAllowedRangeForSolveExercise = function (ots, solveExerciseSession) {
   if (!solveExerciseSession.isInitiated()) {
     // first text ot for solve exercise
     const firstExerciseTextOt = solveExerciseSession.getFirstExerciseTextOt()
-    return firstExerciseTextOt.fromPos <= fromPos && toPos <= firstExerciseTextOt.toPos
+    return [firstExerciseTextOt.fromPos, firstExerciseTextOt.toPos]
   } else {
     // within solving area
     const areas = getAreas(solveExerciseSession.solveOts, ElicastOTAreaSet.EXERCISE_BUILD)
@@ -613,8 +609,35 @@ ElicastOT.isChangeAllowedForSolveExercise = function (ots, solveExerciseSession,
     }
 
     const solveArea = areas[0]
-    return solveArea.fromPos <= fromPos && toPos <= solveArea.toPos
+    return [solveArea.fromPos, solveArea.toPos]
   }
+}
+
+/**
+ * confine text change within solve exercise area by updating given changeObj
+ *
+ * @return {boolean} true if updated, false otherwise
+ */
+ElicastOT.confineChangeForSolveExercise = function (ots, solveExerciseSession, cm, changeObj) {
+  const cmContent = cm.doc.getValue()
+  const fromPos = lineChToPos(cmContent, changeObj.from)
+  const toPos = lineChToPos(cmContent, changeObj.to)
+
+  const [solveAreaFromPos, solveAreaToPos] =
+    ElicastOT.getAllowedRangeForSolveExercise(ots, solveExerciseSession)
+
+  const newFromPos = posToLineCh(cmContent, _.clamp(fromPos, solveAreaFromPos, solveAreaToPos))
+  const newToPos = posToLineCh(cmContent, _.clamp(toPos, solveAreaFromPos, solveAreaToPos))
+
+  if (newFromPos === newToPos) {
+    return false
+  }
+
+  changeObj.update(
+    newFromPos,
+    newToPos,
+  )
+  return true
 }
 
 ElicastOT.replacePartialOts = function (ots, startIdx, amount, newOts) {

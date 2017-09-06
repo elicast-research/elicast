@@ -67,6 +67,14 @@ $codeFontFamily: Menlo, Consolas, 'DejaVu Sans Mono', monospace;
 
   font-family: $codeFontFamily;
 
+  .cursor-show {
+    visibility: visible !important;
+  }
+
+  .cursor-hide {
+    visibility: hidden !important;
+  }
+
   .exercise-block {
     padding: .15em 0;
     border-radius: .1em;

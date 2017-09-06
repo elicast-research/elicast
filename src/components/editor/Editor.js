@@ -585,7 +585,24 @@ export default {
     },
     toggleCursorBlink () {
       const cmCursor = this.$el.querySelector('.CodeMirror-cursors')
-      cmCursor.style.visibility = cmCursor.style.visibility === 'visible' ? 'hidden' : 'visible'
+      if (this.playMode === PlayMode.PLAYBACK) {
+        if (cmCursor.className.indexOf('cursor-hide') < 0) {
+          cmCursor.classList.remove('cursor-show')
+          cmCursor.classList.add('cursor-hide')
+        } else {
+          cmCursor.classList.add('cursor-show')
+          cmCursor.classList.remove('cursor-hide')
+        }
+      } else {
+        if (cmCursor.className.indexOf('cursor-show') >= 0) {
+          cmCursor.classList.remove('cursor-show')
+        }
+        if (cmCursor.className.indexOf('cursor-hide') < 0) {
+          cmCursor.classList.add('cursor-hide')
+        } else {
+          cmCursor.classList.remove('cursor-hide')
+        }
+      }
     },
     togglePlayMode () {
       if (!this.playModeReady) return

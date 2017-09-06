@@ -245,7 +245,10 @@ export default {
           .filter(ot => ot instanceof ElicastText)
           .forEach(ot => ElicastOT.applyOtToCM(this.cm, ot))
 
-        ElicastOT.redrawSolveExerciseArea(this.cm, this.solveExerciseSession.solveOts)
+        ElicastOT.redrawSolveExerciseArea(this.cm,
+          this.solveExerciseSession.solveOts,
+          this.solveExerciseSession.getFirstExerciseTextOt().fromPos)
+
         this.dirty = true
       }
 
@@ -402,7 +405,9 @@ export default {
       this.dirty = true
 
       if (this.playMode === PlayMode.SOLVE_EXERCISE) {
-        ElicastOT.redrawSolveExerciseArea(this.cm, this.solveExerciseSession.solveOts)
+        ElicastOT.redrawSolveExerciseArea(this.cm,
+          this.solveExerciseSession.solveOts,
+          this.solveExerciseSession.getFirstExerciseTextOt().fromPos)
       }
     },
     handleEditorBeforeSelectionChange (cm, obj) {

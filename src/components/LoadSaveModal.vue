@@ -6,8 +6,7 @@
           <h5 class="modal-title">Load/Save</h5>
         </div>
         <div class="modal-body">
-          <div v-show="elicasts === null">Loading...</div>
-          <div v-show="elicasts !== null && elicasts.length === 0">Empty!</div>
+          <div v-show="elicasts !== null && elicasts.length === 0">No screencast yet!</div>
           <ul class="elicast-list">
             <li class="elicast-item clearfix" v-for="elicast in elicasts">
               <a class="elicast-item-load" @click="loadElicast(elicast.id)">
@@ -35,6 +34,12 @@
                   class="btn btn-secondary"
                   @click="close">Close</button>
         </div>
+
+        <div v-show="isWaitingResponse" class="waiting-overlay">
+          <span>
+            <i class="fa fa-circle-o-notch fa-spin fa-fw"></i> Please wait...
+          </span>
+        </div>
       </div>
     </div>
   </div>
@@ -58,6 +63,7 @@ export default {
       modalInstance: null,
       editingElicast: null,
       isShow: false,
+      isWaitingResponse: false,
       elicasts: null
     }
   },
@@ -96,10 +102,14 @@ export default {
       this.isShow = true
       this.modalInstance.show()
 
+      this.isWaitingResponse = true
       this.elicasts = await ElicastService.listElicasts(this.$query.teacher)
+      this.isWaitingResponse = false
     },
     async loadElicast (elicastId) {
+      this.isWaitingResponse = true
       const elicast = await ElicastService.loadElicast(elicastId)
+      this.isWaitingResponse = false
 
       this.$emit('elicastLoaded', elicast)
       this.close()
@@ -109,7 +119,9 @@ export default {
         return
       }
 
+      this.isWaitingResponse = true
       await ElicastService.removeElicast(elicast.id)
+      this.isWaitingResponse = false
 
       // refresh the list
       this.elicasts = await ElicastService.listElicasts(this.$query.teacher)
@@ -121,11 +133,16 @@ export default {
         return
       }
 
+      this.isWaitingResponse = true
       await ElicastService.updateElicast(elicast.id, newElicast, this.$query.teacher)
       await this.loadElicast(elicast.id)
+      this.isWaitingResponse = false
     },
     async saveNewElicast () {
+      this.isWaitingResponse = true
       const newElicastId = await ElicastService.saveElicast(this.editingElicast, this.$query.teacher)
+      this.isWaitingResponse = false
+
       this.editingElicast.id = newElicastId
       this.$emit('elicastSaved', this.editingElicast)
       this.close()
@@ -189,5 +206,21 @@ export default {
 
 .modal-footer button {
   cursor: pointer;
+}
+
+.modal-content .waiting-overlay {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  text-align: center;
+  background-color: rgba(0,0,0,0.7);
+  color: white;
+  font-size: 2rem;
+}
+
+.modal-content .waiting-overlay span {
+  position: relative;
+  top: 40%;
+  transform: translateY(-50%);
 }
 </style>

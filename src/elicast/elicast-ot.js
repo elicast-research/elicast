@@ -431,18 +431,40 @@ ElicastOT.clearRecordingExerciseArea = function (cm) {
     .forEach(marker => marker.clear())
 }
 
-ElicastOT.redrawSolveExerciseArea = function (cm, solveOts) {
+ElicastOT.redrawSolveExerciseArea = function (cm, solveOts, exerciseFromPos) {
+  const CLASS_SOLVE_EXERCISE_BLOCK = 'solve-exercise-block'
+  const CLASS_SOLVE_EXERCISE_PLACEHOLDER = 'solve-exercise-placeholder'
+
+  function setPlaceholderBookmark (lineCh) {
+    const placeholderElement = document.createElement('span')
+    placeholderElement.className = CLASS_SOLVE_EXERCISE_PLACEHOLDER
+    placeholderElement.textContent = ' /* Write your answer here */ '
+    cm.doc.setBookmark(lineCh, {
+      widget: placeholderElement,
+      insertLeft: true
+    })
+  }
+
   cm.doc.getAllMarks()
-    .filter(marker => marker.className === 'solve-exercise-block')
+    .filter(marker =>
+      marker.className === CLASS_SOLVE_EXERCISE_BLOCK || marker.type === 'bookmark')
     .forEach(marker => marker.clear())
 
   const cmContent = cm.doc.getValue()
 
-  getAreas(solveOts).forEach(area => {
-    const fromLineCh = posToLineCh(cmContent, area.fromPos)
-    const toLineCh = posToLineCh(cmContent, area.toPos)
-    cm.doc.markText(fromLineCh, toLineCh, { className: 'solve-exercise-block' })
-  })
+  const areas = getAreas(solveOts)
+  if (areas.length === 0) {
+    console.log(exerciseFromPos)
+    setPlaceholderBookmark(posToLineCh(cmContent, exerciseFromPos))
+  } else {
+    areas.forEach(area => {
+      const fromLineCh = posToLineCh(cmContent, area.fromPos)
+      const toLineCh = posToLineCh(cmContent, area.toPos)
+      cm.doc.markText(fromLineCh, toLineCh, {
+        className: CLASS_SOLVE_EXERCISE_BLOCK
+      })
+    })
+  }
 }
 
 ElicastOT.redrawAssertAreas = function (cm, ots) {
@@ -574,15 +596,11 @@ ElicastOT.isChangeAllowedForRecordExercise = function (ots, recordExerciseSessio
   return exArea.fromPos <= fromPos && toPos <= exArea.toPos
 }
 
-ElicastOT.isChangeAllowedForSolveExercise = function (ots, solveExerciseSession, cm, changeObj) {
-  const cmContent = cm.doc.getValue()
-  const fromPos = lineChToPos(cmContent, changeObj.from)
-  const toPos = lineChToPos(cmContent, changeObj.to)
-
+ElicastOT.getAllowedRangeForSolveExercise = function (ots, solveExerciseSession) {
   if (!solveExerciseSession.isInitiated()) {
     // first text ot for solve exercise
     const firstExerciseTextOt = solveExerciseSession.getFirstExerciseTextOt()
-    return firstExerciseTextOt.fromPos <= fromPos && toPos <= firstExerciseTextOt.toPos
+    return [firstExerciseTextOt.fromPos, firstExerciseTextOt.toPos]
   } else {
     // within solving area
     const areas = getAreas(solveExerciseSession.solveOts, ElicastOTAreaSet.EXERCISE_BUILD)
@@ -591,8 +609,35 @@ ElicastOT.isChangeAllowedForSolveExercise = function (ots, solveExerciseSession,
     }
 
     const solveArea = areas[0]
-    return solveArea.fromPos <= fromPos && toPos <= solveArea.toPos
+    return [solveArea.fromPos, solveArea.toPos]
   }
+}
+
+/**
+ * confine text change within solve exercise area by updating given changeObj
+ *
+ * @return {boolean} true if updated, false otherwise
+ */
+ElicastOT.confineChangeForSolveExercise = function (ots, solveExerciseSession, cm, changeObj) {
+  const cmContent = cm.doc.getValue()
+  const fromPos = lineChToPos(cmContent, changeObj.from)
+  const toPos = lineChToPos(cmContent, changeObj.to)
+
+  const [solveAreaFromPos, solveAreaToPos] =
+    ElicastOT.getAllowedRangeForSolveExercise(ots, solveExerciseSession)
+
+  const newFromPos = posToLineCh(cmContent, _.clamp(fromPos, solveAreaFromPos, solveAreaToPos))
+  const newToPos = posToLineCh(cmContent, _.clamp(toPos, solveAreaFromPos, solveAreaToPos))
+
+  if (newFromPos === newToPos) {
+    return false
+  }
+
+  changeObj.update(
+    newFromPos,
+    newToPos,
+  )
+  return true
 }
 
 ElicastOT.replacePartialOts = function (ots, startIdx, amount, newOts) {

@@ -439,6 +439,12 @@ ElicastOT.redrawSolveExerciseArea = function (cm, solveOts, exerciseFromPos) {
     const placeholderElement = document.createElement('span')
     placeholderElement.className = CLASS_SOLVE_EXERCISE_PLACEHOLDER
     placeholderElement.textContent = ' /* Write your answer here */ '
+    placeholderElement.onclick = (e) => {
+      e.preventDefault()
+      cm.focus()
+      cm.setSelection(lineCh)
+      return true
+    }
     cm.doc.setBookmark(lineCh, {
       widget: placeholderElement,
       insertLeft: true
@@ -454,7 +460,6 @@ ElicastOT.redrawSolveExerciseArea = function (cm, solveOts, exerciseFromPos) {
 
   const areas = getAreas(solveOts)
   if (areas.length === 0) {
-    console.log(exerciseFromPos)
     setPlaceholderBookmark(posToLineCh(cmContent, exerciseFromPos))
   } else {
     areas.forEach(area => {

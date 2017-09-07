@@ -97,6 +97,7 @@
 
 .CodeMirror {
   $readonlyBackgroundColor: rgba(0, 0, 0, 0.066);
+  $solveExerciseBackgroundColor: rgba(255, 255, 255, 0.7);
 
   .solve-exercise ~ & {
     background-color: $readonlyBackgroundColor;
@@ -105,7 +106,7 @@
   .solve-exercise-block {
     padding: .2em 0;
     border-radius: .2em;
-    background-color: rgba(255, 255, 255, 0.7);
+    background-color: $solveExerciseBackgroundColor;
   }
 
   .solve-exercise-placeholder {
@@ -118,7 +119,7 @@
 
     display: inline-block;
     color: gray;
-    background-color: white;
+    background-color: $solveExerciseBackgroundColor;
   }
 }
 

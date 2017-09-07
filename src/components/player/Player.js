@@ -112,7 +112,6 @@ export default {
       let newOtIdx = this.ots.findIndex(ot => ts < ot.ts)
       newOtIdx = (newOtIdx < 0 ? this.ots.length : newOtIdx) - 1
 
-      let shouldRedrawExerciseAreas = false
       let shouldRedrawRunOutput = false
       let shouldRestartPlaybackSound = false
 
@@ -133,9 +132,7 @@ export default {
           ElicastOT.applyOtToCM(this.cm, ot)
         }
 
-        if (ot instanceof ElicastText && ot._exId) {
-          shouldRedrawExerciseAreas = true
-        } else if (ot instanceof ElicastRun) {
+        if (ot instanceof ElicastRun) {
           shouldRedrawRunOutput = true
         } else if (ot instanceof ElicastExercise && !ot._solved) {
           this.playMode = PlayMode.SOLVE_EXERCISE
@@ -154,22 +151,14 @@ export default {
           ElicastOT.revertOtToCM(this.cm, ot)
         }
 
-        if (ot instanceof ElicastText && ot._exId) {
-          shouldRedrawExerciseAreas = true
-        } else if (ot instanceof ElicastRun) {
+        if (ot instanceof ElicastRun) {
           shouldRedrawRunOutput = true
         }
       }
 
       // if playMode is not playback, always redraw when ts changes
-      shouldRedrawExerciseAreas = shouldRedrawExerciseAreas || this.dirty
       shouldRedrawRunOutput = shouldRedrawRunOutput || this.dirty
       shouldRestartPlaybackSound = shouldRestartPlaybackSound && this.playMode === PlayMode.PLAYBACK
-
-      // restore exercise areas
-      if (shouldRedrawExerciseAreas) {
-        ElicastOT.redrawExerciseAreas(this.cm, this.ots.slice(0, newOtIdx + 1))
-      }
 
       // restore run output
       if (shouldRedrawRunOutput) {

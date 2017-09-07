@@ -647,11 +647,10 @@ ElicastOT.getSegments = function (ots) {
   let currentSegmentType = null
   return ots
     .map(ot => {
-      const otAndType = { ot, type: currentSegmentType }
       if (segmentableTypes.includes(ot.constructor)) {
         currentSegmentType = !currentSegmentType ? ot.constructor : null
       }
-      return otAndType
+      return { ot, type: currentSegmentType }
     })
     .reduce((segments, { ot, type }) => {
       const lastSegment = segments.length && segments[segments.length - 1]

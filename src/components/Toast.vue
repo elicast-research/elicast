@@ -1,14 +1,18 @@
 <template>
-  <div>
+  <transition-group name="list" tag="div">
     <div :class="toast.class"
          v-for="toast in toasts"
          v-html="toast.content"
+         :key="toast._id"
          role="alert">
     </div>
-  </div>
+  </transition-group>
 </template>
 
 <script>
+
+let toastIdCounter = 1
+
 export default {
   data () {
     return {
@@ -18,7 +22,9 @@ export default {
 
   methods: {
     show (toast) {
+      toast._id = toastIdCounter++
       this.toasts.push(toast)
+
       if (toast.lifespan) {
         setTimeout(() => this.remove(toast), toast.lifespan)
       }
@@ -32,5 +38,13 @@ export default {
 }
 </script>
 
-<style lang="scss">
+<style lang="scss" scoped>
+
+.list-enter-active, .list-leave-active {
+  transition: opacity .2s
+}
+.list-enter, .list-leave-to {
+  opacity: 0
+}
+
 </style>

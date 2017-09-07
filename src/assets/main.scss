@@ -67,6 +67,10 @@ $codeFontFamily: Menlo, Consolas, 'DejaVu Sans Mono', monospace;
 
   font-family: $codeFontFamily;
 
+  .CodeMirror-cursor {
+    border-left: 2px solid transparentize(#546E7A, 0.25) !important;
+  }
+
   .cursor-show {
     visibility: visible !important;
   }

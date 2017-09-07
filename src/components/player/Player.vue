@@ -11,8 +11,8 @@
                   :options="editorOptions"
                   @beforeChange="handleEditorBeforeChange"
                   @change="handleEditorChange"
-                  @beforeSelectionChange="handleEditorBeforeSelectionChange">
-                  <!-- @cursorActivity="handleEditorCursorActivity"> -->
+                  @beforeSelectionChange="handleEditorBeforeSelectionChange"
+                  @cursorActivity="handleEditorCursorActivity">
       </codemirror>
 
       <div class="code-right-pane">

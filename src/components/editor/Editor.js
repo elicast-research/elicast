@@ -375,7 +375,7 @@ export default {
   mounted (t) {
     this.logger = new Logger('Editor')
 
-    this.cursorBlinkTimer = setInterval(this.toggleCursorBlink, CURSOR_BLINK_RATE)
+    this.cursorBlinkTimer = this.cursorBlinkTick()
 
     this.cm = this.$refs.cm.editor
     this.cm.on('mousedown', this.handleEditorMousedown)
@@ -547,6 +547,8 @@ export default {
       }
     },
     handleEditorCursorActivity (cm) {
+      this.forceCursorBlink()
+
       if (!this.playMode.isRecording()) return
 
       const ts = this.recordStartOt.getRelativeTS()
@@ -583,24 +585,35 @@ export default {
       }
       this.ts = nextTs
     },
-    toggleCursorBlink () {
+    cursorBlinkTick () {
+      this.cursorBlinkTimer = setTimeout(() => {
+        this.toggleCursorBlink()
+        this.cursorBlinkTick()
+      }, CURSOR_BLINK_RATE)
+    },
+    forceCursorBlink () {
+      this.toggleCursorBlink(true)
+      clearTimeout(this.cursorBlinkTimer)
+      this.cursorBlinkTick()
+    },
+    toggleCursorBlink (forceShow) {
       const cmCursor = this.$el.querySelector('.CodeMirror-cursors')
       if (this.playMode === PlayMode.PLAYBACK) {
-        if (cmCursor.className.indexOf('cursor-hide') < 0) {
-          cmCursor.classList.remove('cursor-show')
-          cmCursor.classList.add('cursor-hide')
-        } else {
+        if (forceShow || cmCursor.className.indexOf('cursor-hide') >= 0) {
           cmCursor.classList.add('cursor-show')
           cmCursor.classList.remove('cursor-hide')
+        } else {
+          cmCursor.classList.remove('cursor-show')
+          cmCursor.classList.add('cursor-hide')
         }
       } else {
         if (cmCursor.className.indexOf('cursor-show') >= 0) {
           cmCursor.classList.remove('cursor-show')
         }
-        if (cmCursor.className.indexOf('cursor-hide') < 0) {
-          cmCursor.classList.add('cursor-hide')
-        } else {
+        if (forceShow || cmCursor.className.indexOf('cursor-hide') >= 0) {
           cmCursor.classList.remove('cursor-hide')
+        } else {
+          cmCursor.classList.add('cursor-hide')
         }
       }
     },

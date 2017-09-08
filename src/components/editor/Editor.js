@@ -373,7 +373,7 @@ export default {
   },
 
   mounted (t) {
-    this.logger = new Logger('Editor')
+    this.logger = this.$logger.getLogger('Editor')
 
     this.cursorBlinkTimer = this.cursorBlinkTick()
 

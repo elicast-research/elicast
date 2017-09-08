@@ -39,7 +39,7 @@ export default {
     },
     overlays: {
       type: Array,
-      default: []
+      default: () => []
     }
   },
 

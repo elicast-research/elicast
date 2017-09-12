@@ -451,10 +451,7 @@ ElicastOT.redrawSolveExerciseArea = function (cm, solveOts, exerciseFromPos) {
     })
   }
 
-  cm.doc.getAllMarks()
-    .filter(marker =>
-      marker.className === CLASS_SOLVE_EXERCISE_BLOCK || marker.type === 'bookmark')
-    .forEach(marker => marker.clear())
+  ElicastOT.clearSolveExerciseArea(cm)
 
   const cmContent = cm.doc.getValue()
 
@@ -470,6 +467,13 @@ ElicastOT.redrawSolveExerciseArea = function (cm, solveOts, exerciseFromPos) {
       })
     })
   }
+}
+
+ElicastOT.clearSolveExerciseArea = function (cm) {
+  cm.doc.getAllMarks()
+    .filter(marker =>
+      marker.className === 'solve-exercise-block' || marker.type === 'bookmark')
+    .forEach(marker => marker.clear())
 }
 
 ElicastOT.redrawAssertAreas = function (cm, ots) {

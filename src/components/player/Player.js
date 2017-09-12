@@ -239,6 +239,9 @@ export default {
           this.solveExerciseSession.getFirstExerciseTextOt().fromPos)
 
         this.dirty = true
+      } else if (prevPlayMode === PlayMode.SOLVE_EXERCISE) {
+        // clear the placeholder
+        ElicastOT.clearSolveExerciseArea(this.cm)
       }
 
       _.defer(() => {

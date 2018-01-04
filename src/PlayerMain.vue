@@ -12,7 +12,7 @@
 </template>
 
 <script>
-import ElicastPlayer from '@/components/Player'
+import ElicastPlayer from '@/components/player'
 import ElicastService from '@/elicast/elicast-service'
 import LoadSaveModal from '@/components/LoadSaveModal'
 import _ from 'lodash'

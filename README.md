@@ -1,6 +1,6 @@
-# test
+# Elicast
 
-> A Vue.js project
+> Elicast: Embedding Interactive Exercises in Instructional Programming Screencasts (L@S 18')
 
 ## Build Setup
 

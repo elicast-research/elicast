@@ -1,6 +1,7 @@
 # Elicast
 
-> Elicast: Embedding Interactive Exercises in Instructional Programming Screencasts (L@S 18')
+> Elicast: Embedding Interactive Exercises in Instructional Programming Screencasts (L@S '18)
+https://dl.acm.org/citation.cfm?id=3231657
 
 ## Build Setup
 

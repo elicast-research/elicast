@@ -22,13 +22,13 @@ If you use this code for academic purposes, please cite it as:
 
 ## Key Features
 
-### Text-based Programming Screencast
+### Text-based Programming Screencast ([video](https://youtu.be/dKWlqDLgsm8))
 
 <p align="center"><img alt="text-based_screencast.png" src="https://raw.githubusercontent.com/elicast-research/elicast/master/imgs/text-based_screencast.png" width="60%"></p>
 
 Text-based programming screencast is the first core feature of Elicast. To overcome the limitation on interactions between learners and the content of screencast, when the instructors record screencasts, Elicast captures instructors' keyboard activities instead of screen captures. Then, when learners play the recorded screencast, Elicast reconstruct keyboard activities to build a video-like view. With this feature, Elicast allows users to select and edit the code content in the screencasts.
 
-### Embedded Interactive Exercise
+### Embedded Interactive Exercise ([video](https://youtu.be/KZZIvBtDwXU))
 
 <p align="center"><img alt="embedded_exercise.png" src="https://raw.githubusercontent.com/elicast-research/elicast/master/imgs/embedded_exercise.png" width="60%"></p>
 
